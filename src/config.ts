@@ -23,7 +23,7 @@ export function createConfig(indexerName: keyof typeof CONFIG): CheckpointConfig
         abi: 'Schnaps',
         events: [
           {
-            name: 'PaymentReceived',
+            name: 'PaymentReceived(address,address,uint256,bytes)',
             fn: 'handlePaymentReceived'
           }
         ]
