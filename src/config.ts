@@ -1,16 +1,11 @@
 import { CheckpointConfig } from '@snapshot-labs/checkpoint';
-import Poster from './abis/Poster.json';
+import Schnaps from './abis/Schnaps.json';
 
 const CONFIG = {
-  mainnet: {
-    networkNodeUrl: 'https://starknet-mainnet.infura.io/v3/c82b1cf516984b599108487a1b6481c4',
-    contract: '0x0654e9232d5f402829755029901f69c32b423ded0f8c081e416e3b24f5a7a46e',
-    start: 639485
-  },
-  sepolia: {
-    networkNodeUrl: 'https://starknet-sepolia.infura.io/v3/c82b1cf516984b599108487a1b6481c4',
-    contract: '0x03aa7630a4f9c5108bf3cd1910c7d45404cba865fc0fc0756bf9eedc073a98a9',
-    start: 65137
+  base: {
+    networkNodeUrl: 'https://base-rpc.publicnode.com',
+    contract: '0xa92d665c4814c8e1681aab292ba6d2278d01dee0',
+    start: 25947620
   }
 };
 
@@ -25,17 +20,17 @@ export function createConfig(indexerName: keyof typeof CONFIG): CheckpointConfig
       {
         contract,
         start,
-        abi: 'Poster',
+        abi: 'Schnaps',
         events: [
           {
-            name: 'NewPost',
-            fn: 'handleNewPost'
+            name: 'PaymentReceived',
+            fn: 'handlePaymentReceived'
           }
         ]
       }
     ],
     abis: {
-      Poster
+      Schnaps
     }
   };
 }

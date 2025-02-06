@@ -1,11 +1,10 @@
 scalar Text
 
-type Post {
+type Payment {
   id: String!
-  author: String!
-  content: Text!
-  tag: String
-  tx_hash: String!
-  created_at: Int!
-  created_at_block: Int!
+  sender: String!
+  token: Text!
+  amount: String
+  barcode: String!
+  block: Int!
 }

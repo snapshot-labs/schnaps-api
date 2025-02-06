@@ -1,28 +1,27 @@
-import { validateAndParseAddress } from 'starknet';
-import { starknet } from '@snapshot-labs/checkpoint';
-import { Post } from '../.checkpoint/models';
-import { longStringToText } from './utils';
+import { evm } from '@snapshot-labs/checkpoint';
+import { Payment } from '../.checkpoint/models';
 
-export function createStarknetWriters(indexerName: string) {
-  const handleNewPost: starknet.Writer = async ({ block, tx, rawEvent, event }) => {
-    if (!block || !event || !rawEvent) return;
+export function createEvmWriters(indexerName: string) {
+  const handlePaymentReceived: evm.Writer = async ({ block, tx, event }) => {
+    console.log('In handlePaymentReceived');
+    if (!block || !event) return;
 
-    const author = validateAndParseAddress(rawEvent.from_address);
-    const content = longStringToText(event.content);
-    const tag = longStringToText(event.tag);
+    const sender = event.args.sender;
+    const token = event.args.token;
+    const amount = event.args.amount;
+    const barcode = event.args.barcode;
 
-    const post = new Post(`${author}/${tx.transaction_hash}`, indexerName);
-    post.author = author;
-    post.content = content;
-    post.tag = tag;
-    post.tx_hash = tx.transaction_hash;
-    post.created_at = block.timestamp;
-    post.created_at_block = block.block_number;
+    const payment = new Payment(`${sender}/${tx.hash}`, indexerName);
+    payment.sender = sender;
+    payment.token = token;
+    payment.amount = amount;
+    payment.barcode = barcode;
+    payment.block = block.number;
 
-    await post.save();
+    await payment.save();
   };
 
   return {
-    handleNewPost
+    handlePaymentReceived
   };
 }
