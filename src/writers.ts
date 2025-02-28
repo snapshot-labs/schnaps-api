@@ -1,9 +1,7 @@
 import { evm } from '@snapshot-labs/checkpoint';
 import { Payment } from '../.checkpoint/models';
-import { readFileSync } from 'fs';
 import { getJSON } from './utils';
-
-const tokens = JSON.parse(readFileSync('./src/payment_tokens.json', 'utf8'));
+import tokens from './payment_tokens.json';
 
 function getTokenName(token: string, chain: string) {
   return tokens[chain][token.toLowerCase()];
