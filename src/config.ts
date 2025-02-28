@@ -7,7 +7,7 @@ export const DEFAULT_INFURA_API_KEY =
 
 const CONFIG = {
   sepolia: {
-    networkNodeUrl: `https://sepolia.infura.io/v3/${DEFAULT_INFURA_API_KEY}`,
+    networkNodeUrl: 'https://rpc.brovider.xyz/11155111',
     contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
     start: 7802789
   },
