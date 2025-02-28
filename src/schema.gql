@@ -1,10 +1,10 @@
-scalar Text
-
 type Payment {
   id: String!
   sender: String!
-  token: Text!
-  amount: String
+  token: String!
+  amount: String!
   barcode: String!
   block: Int!
+  date: String!
+  product: String!
 }

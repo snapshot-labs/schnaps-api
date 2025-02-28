@@ -11,8 +11,10 @@ const dir = __dirname.endsWith('dist/src') ? '../' : '';
 const schemaFile = path.join(__dirname, `${dir}../src/schema.gql`);
 const schema = fs.readFileSync(schemaFile, 'utf8');
 
+const sepoliaConfig = createConfig('sepolia');
 const baseConfig = createConfig('base');
 
+const sepoliaIndexer = new evm.EvmIndexer(createEvmWriters('sepolia'));
 const baseIndexer = new evm.EvmIndexer(createEvmWriters('base'));
 
 const checkpoint = new Checkpoint(schema, {
@@ -20,6 +22,7 @@ const checkpoint = new Checkpoint(schema, {
   prettifyLogs: true
 });
 
+checkpoint.addIndexer('sepolia', sepoliaConfig, sepoliaIndexer);
 checkpoint.addIndexer('base', baseConfig, baseIndexer);
 
 async function run() {
