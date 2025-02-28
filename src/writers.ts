@@ -34,7 +34,7 @@ export function createEvmWriters(indexerName: string) {
     const ipfsData = await getJSON(barcode);
 
     payment.block = block.number;
-    payment.product = ipfsData.type;
+    payment.type = ipfsData.type;
     payment.timestamp = block.timestamp;
 
     await payment.save();

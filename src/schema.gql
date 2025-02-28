@@ -6,5 +6,5 @@ type Payment {
   barcode: String!
   block: Int!
   timestamp: Int!
-  product: String!
+  type: String!
 }
