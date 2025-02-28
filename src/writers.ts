@@ -35,8 +35,7 @@ export function createEvmWriters(indexerName: string) {
 
     payment.block = block.number;
     payment.product = ipfsData.type;
-    const paymentDate = new Date(block.timestamp * 1000);
-    payment.date = paymentDate.toDateString();
+    payment.timestamp = block.timestamp;
 
     await payment.save();
   };

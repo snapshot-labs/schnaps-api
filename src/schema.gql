@@ -5,6 +5,6 @@ type Payment {
   amount: String!
   barcode: String!
   block: Int!
-  date: String!
+  timestamp: Int!
   product: String!
 }
