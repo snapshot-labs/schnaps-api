@@ -14,7 +14,8 @@ export function createEvmWriters(indexerName: string) {
 
     const sender = event.args.sender;
     const tokenAddress = event.args.token.toLowerCase();
-    const amount = (Number(event.args.amount.toString()) / 1e6).toFixed(2); // Transforms 1990000 to 1.99
+    const amountRaw = event.args.amount.toString();
+    const amountDecimal = (Number(amountRaw) / 1e6).toFixed(2); // Transforms 1990000 to 1.99. We used 1e6 because USDC and USDT have 6 decimals.
     const barcode = event.args.barcode;
 
     const chain = indexerName; // The indexer name corresponds to the chain name
@@ -29,7 +30,8 @@ export function createEvmWriters(indexerName: string) {
     payment.sender = sender;
     payment.token_address = tokenAddress;
     payment.token_symbol = tokenSymbol;
-    payment.amount = amount;
+    payment.amount_raw = amountRaw;
+    payment.amount_decimal = amountDecimal;
 
     payment.barcode = barcode;
     const ipfsData = await getJSON(barcode);
