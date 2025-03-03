@@ -38,6 +38,9 @@ export function createEvmWriters(indexerName: string) {
 
     payment.block = block.number;
     payment.type = metadata.type;
+    if (payment.type === 'turbo') {
+      payment.beneficiary = metadata.params.space;
+    }
     payment.timestamp = block.timestamp;
 
     await payment.save();

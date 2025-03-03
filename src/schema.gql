@@ -9,4 +9,5 @@ type Payment {
   block: Int!
   timestamp: Int!
   type: String!
+  beneficiary: String!
 }
