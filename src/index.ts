@@ -11,19 +11,25 @@ const dir = __dirname.endsWith('dist/src') ? '../' : '';
 const schemaFile = path.join(__dirname, `${dir}../src/schema.gql`);
 const schema = fs.readFileSync(schemaFile, 'utf8');
 
-const sepoliaConfig = createConfig('sepolia');
-const baseConfig = createConfig('base');
-
-const sepoliaIndexer = new evm.EvmIndexer(createEvmWriters('sepolia'));
-const baseIndexer = new evm.EvmIndexer(createEvmWriters('base'));
-
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
   prettifyLogs: true
 });
 
-checkpoint.addIndexer('sepolia', sepoliaConfig, sepoliaIndexer);
-checkpoint.addIndexer('base', baseConfig, baseIndexer);
+if (process.env.INDEX_TESTNET) {
+  // Only index testnets
+  const sepConfig = createConfig('sep');
+  const sepIndexer = new evm.EvmIndexer(createEvmWriters('sep'));
+  checkpoint.addIndexer('sep', sepConfig, sepIndexer);
+} else {
+  const baseConfig = createConfig('base');
+  const baseIndexer = new evm.EvmIndexer(createEvmWriters('base'));
+  checkpoint.addIndexer('base', baseConfig, baseIndexer);
+
+  const ethConfig = createConfig('eth');
+  const ethIndexer = new evm.EvmIndexer(createEvmWriters('eth'));
+  checkpoint.addIndexer('eth', ethConfig, ethIndexer);
+}
 
 async function run() {
   await checkpoint.resetMetadata();
