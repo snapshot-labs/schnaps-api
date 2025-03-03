@@ -34,10 +34,10 @@ export function createEvmWriters(indexerName: string) {
     payment.amount_decimal = amountDecimal;
 
     payment.barcode = barcode;
-    const ipfsData = await getJSON(barcode);
+    const metadata = await getJSON(barcode);
 
     payment.block = block.number;
-    payment.type = ipfsData.type;
+    payment.type = metadata.type;
     payment.timestamp = block.timestamp;
 
     await payment.save();
