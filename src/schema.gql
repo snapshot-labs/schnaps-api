@@ -1,7 +1,8 @@
 type Payment {
   id: String!
   sender: String!
-  token: String!
+  token_address: String!
+  token_symbol: String!
   amount: String!
   barcode: String!
   block: Int!

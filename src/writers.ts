@@ -3,8 +3,8 @@ import { Payment } from '../.checkpoint/models';
 import { getJSON } from './utils';
 import tokens from './payment_tokens.json';
 
-function getTokenName(token: string, chain: string) {
-  return tokens[chain][token.toLowerCase()];
+function getTokenSymbol(tokenAddress: string, chain: string) {
+  return tokens[chain][tokenAddress];
 }
 
 export function createEvmWriters(indexerName: string) {
@@ -13,21 +13,22 @@ export function createEvmWriters(indexerName: string) {
     if (!block || !event) return;
 
     const sender = event.args.sender;
-    const token = event.args.token;
+    const tokenAddress = event.args.token.toLowerCase();
     const amount = (Number(event.args.amount.toString()) / 1e6).toFixed(2); // Transforms 1990000 to 1.99
     const barcode = event.args.barcode;
 
     const chain = indexerName; // The indexer name corresponds to the chain name
-    let tokenName = getTokenName(token, chain);
+    let tokenSymbol = getTokenSymbol(tokenAddress, chain);
 
-    if (!tokenName) {
+    if (!tokenSymbol) {
       // TODO log missing token
-      tokenName = token;
+      tokenSymbol = tokenAddress;
     }
 
     const payment = new Payment(`${tx.hash}`, indexerName);
     payment.sender = sender;
-    payment.token = tokenName;
+    payment.token_address = tokenAddress;
+    payment.token_symbol = tokenSymbol;
     payment.amount = amount;
 
     payment.barcode = barcode;
