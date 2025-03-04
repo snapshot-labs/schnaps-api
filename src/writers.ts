@@ -19,11 +19,7 @@ export function createEvmWriters(indexerName: string) {
     const barcode = event.args.barcode;
 
     const chain = indexerName; // The indexer name corresponds to the chain name
-    let tokenSymbol = getTokenSymbol(tokenAddress, chain);
-
-    if (!tokenSymbol) {
-      tokenSymbol = tokenAddress;
-    }
+    let tokenSymbol = getTokenSymbol(tokenAddress, chain) || '';
 
     const payment = new Payment(`${tx.hash}`, indexerName);
     payment.sender = sender;
