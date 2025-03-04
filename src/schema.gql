@@ -1,4 +1,5 @@
 scalar BigDecimal
+scalar BigInt
 
 type Payment {
   id: String!
@@ -6,7 +7,7 @@ type Payment {
   token_address: String!
   token_symbol: String!
   amount_raw: BigInt!
-  amount_decimal: Big!
+  amount_decimal: BigDecimal!
   barcode: String!
   block: Int!
   timestamp: Int!
