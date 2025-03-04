@@ -6,6 +6,7 @@ import fs from 'fs';
 import Checkpoint, { evm, LogLevel } from '@snapshot-labs/checkpoint';
 import { createConfig } from './config';
 import { createEvmWriters } from './writers';
+import overrides from './overrides.json';
 
 const dir = __dirname.endsWith('dist/src') ? '../' : '';
 const schemaFile = path.join(__dirname, `${dir}../src/schema.gql`);
@@ -13,7 +14,8 @@ const schema = fs.readFileSync(schemaFile, 'utf8');
 
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
-  prettifyLogs: true
+  prettifyLogs: true,
+  overridesConfig: overrides
 });
 
 if (process.env.INDEX_TESTNET) {
