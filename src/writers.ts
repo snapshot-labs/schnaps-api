@@ -22,7 +22,6 @@ export function createEvmWriters(indexerName: string) {
     let tokenSymbol = getTokenSymbol(tokenAddress, chain);
 
     if (!tokenSymbol) {
-      // TODO log missing token
       tokenSymbol = tokenAddress;
     }
 
