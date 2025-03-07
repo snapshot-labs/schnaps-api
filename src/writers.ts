@@ -25,7 +25,6 @@ export function createEvmWriters(indexerName: string) {
     payment.token_address = tokenAddress;
     payment.token_symbol = tokenSymbol;
     payment.amount_raw = amountRaw;
-    console.log('amountDecimal', amountDecimal);
     payment.amount_decimal = amountDecimal.toString();
 
     payment.barcode = barcode;
