@@ -15,7 +15,7 @@ export function createEvmWriters(indexerName: string) {
     const sender = event.args.sender;
     const tokenAddress = event.args.token.toLowerCase();
     const amountRaw = BigInt(event.args.amount);
-    const amountDecimal = amountRaw / BigInt(1e6); // Transforms 1990000 to 1.99. We used 1e6 because USDC and USDT have 6 decimals.
+    const amountDecimal = Number(amountRaw) / 1e6;
     const barcode = event.args.barcode;
 
     const tokenSymbol = getTokenSymbol(tokenAddress, indexerName) || '';
