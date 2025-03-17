@@ -9,6 +9,12 @@ jobs:
         with:
           node-version: '18'
           cache: 'yarn'
+      - name: Install PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib
+          sudo systemctl start postgresql
+          sudo systemctl enable postgresql
       - name: Set up PostgreSQL
         run: |
           sudo systemctl start postgresql
