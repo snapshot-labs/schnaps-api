@@ -20,7 +20,7 @@ export function createEvmWriters(indexerName: string) {
 
     const tokenSymbol = getTokenSymbol(tokenAddress, indexerName) || '';
 
-    const payment = new Payment(`${tx.hash}`, indexerName);
+    const payment = new Payment(tx.hash, indexerName);
     payment.sender = sender;
     payment.token_address = tokenAddress;
     payment.token_symbol = tokenSymbol;
