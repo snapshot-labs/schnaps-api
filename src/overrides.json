@@ -2,7 +2,7 @@
   "decimal_types": {
     "BigDecimal": {
       "p": 60,
-      "d": 2
+      "d": 6
     }
   }
 }
