@@ -1,5 +1,11 @@
 import { evm } from '@snapshot-labs/checkpoint';
 import { Payment } from '../.checkpoint/models';
+import { getJSON } from './utils';
+import tokens from './payment_tokens.json';
+
+function getTokenSymbol(tokenAddress: string, chain: string) {
+  return tokens[chain][tokenAddress];
+}
 
 export function createEvmWriters(indexerName: string) {
   const handlePaymentReceived: evm.Writer = async ({ block, tx, event }) => {
@@ -7,16 +13,27 @@ export function createEvmWriters(indexerName: string) {
     if (!block || !event) return;
 
     const sender = event.args.sender;
-    const token = event.args.token;
-    const amount = event.args.amount;
+    const tokenAddress = event.args.token.toLowerCase();
+    const amountRaw = BigInt(event.args.amount);
+    const amountDecimal = Number(amountRaw) / 1e6;
     const barcode = event.args.barcode;
 
-    const payment = new Payment(`${sender}/${tx.hash}`, indexerName);
+    const tokenSymbol = getTokenSymbol(tokenAddress, indexerName) || '';
+
+    const payment = new Payment(tx.hash, indexerName);
     payment.sender = sender;
-    payment.token = token;
-    payment.amount = amount;
+    payment.token_address = tokenAddress;
+    payment.token_symbol = tokenSymbol;
+    payment.amount_raw = amountRaw;
+    payment.amount_decimal = amountDecimal.toString();
+
     payment.barcode = barcode;
+    const metadata = await getJSON(barcode);
+
     payment.block = block.number;
+    payment.type = metadata.type;
+    payment.beneficiary = payment.type === 'turbo' ? metadata.params.space : 'unknown';
+    payment.timestamp = block.timestamp;
 
     await payment.save();
   };

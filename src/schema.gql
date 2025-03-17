@@ -1,10 +1,16 @@
-scalar Text
+scalar BigDecimal
+scalar BigInt
 
 type Payment {
   id: String!
   sender: String!
-  token: Text!
-  amount: String
+  token_address: String!
+  token_symbol: String!
+  amount_raw: BigInt!
+  amount_decimal: BigDecimal!
   barcode: String!
   block: Int!
+  timestamp: Int!
+  type: String!
+  beneficiary: String!
 }

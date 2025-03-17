@@ -1,22 +1,23 @@
 {
-  "name": "@snapshot-labs/checkpoint-template",
+  "name": "@snapshot-labs/payment-indexer",
   "version": "0.1.0",
   "license": "MIT",
-  "description": "Checkpoint starter template",
+  "description": "Indexer for the Schnaps payment contract",
   "scripts": {
     "codegen": "checkpoint generate",
     "lint": "eslint src/ --ext .ts --fix",
     "prebuild": "yarn codegen",
     "build": "tsc",
     "dev": "nodemon src/index.ts",
-    "start": "node dist/src/index.js"
+    "start": "node dist/src/index.js",
+    "predev": "yarn codegen"
   },
   "eslintConfig": {
     "extends": "@snapshot-labs"
   },
   "prettier": "@snapshot-labs/prettier-config",
   "dependencies": {
-    "@snapshot-labs/checkpoint": "^0.1.0-beta.46",
+    "@snapshot-labs/checkpoint": "^0.1.0-beta.50",
     "@types/node": "^18.11.6",
     "cors": "^2.8.5",
     "dotenv": "^16.0.1",

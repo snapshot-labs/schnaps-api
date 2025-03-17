@@ -17,7 +17,7 @@
     "inputs": [
       { "name": "token", "type": "address", "internalType": "contract IERC20" },
       { "name": "amount", "type": "uint256", "internalType": "uint256" },
-      { "name": "barcode", "type": "bytes", "internalType": "bytes" }
+      { "name": "barcode", "type": "string", "internalType": "string" }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
@@ -25,7 +25,7 @@
   {
     "type": "function",
     "name": "payWithNativeToken",
-    "inputs": [{ "name": "barcode", "type": "bytes", "internalType": "bytes" }],
+    "inputs": [{ "name": "barcode", "type": "string", "internalType": "string" }],
     "outputs": [],
     "stateMutability": "payable"
   },
@@ -80,7 +80,7 @@
       { "name": "sender", "type": "address", "indexed": false, "internalType": "address" },
       { "name": "token", "type": "address", "indexed": false, "internalType": "address" },
       { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" },
-      { "name": "barcode", "type": "bytes", "indexed": false, "internalType": "bytes" }
+      { "name": "barcode", "type": "string", "indexed": false, "internalType": "string" }
     ],
     "anonymous": false
   },
