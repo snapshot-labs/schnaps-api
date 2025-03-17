@@ -9,20 +9,5 @@ jobs:
         with:
           node-version: '18'
           cache: 'yarn'
-      - name: Install PostgreSQL
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql postgresql-contrib
-          sudo systemctl start postgresql
-          sudo systemctl enable postgresql
-      - name: Set up PostgreSQL
-        run: |
-          sudo systemctl start postgresql
-          sudo -u postgres psql -c "CREATE DATABASE checkpoint;"
-          sudo -u postgres psql -c "CREATE USER checkpoint_user WITH PASSWORD 'checkpoint_pass';"
-          sudo -u postgres psql -c "ALTER DATABASE checkpoint OWNER TO checkpoint_user;"
-      - run: yarn install
       - run: yarn lint
       - run: yarn build
-        env:
-          DATABASE_URL: 'postgresql://checkpoint_user:checkpoint_pass@localhost:5432/checkpoint'
