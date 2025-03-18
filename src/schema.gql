@@ -14,3 +14,9 @@ type Payment {
   type: String!
   beneficiary: String!
 }
+
+type Space {
+  id: String!
+  turbo_expiration: Int!
+  turbo_enabled: Boolean!
+}

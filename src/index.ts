@@ -24,10 +24,6 @@ if (process.env.INDEX_TESTNET) {
   const sepIndexer = new evm.EvmIndexer(createEvmWriters('sep'));
   checkpoint.addIndexer('sep', sepConfig, sepIndexer);
 } else {
-  const baseConfig = createConfig('base');
-  const baseIndexer = new evm.EvmIndexer(createEvmWriters('base'));
-  checkpoint.addIndexer('base', baseConfig, baseIndexer);
-
   const ethConfig = createConfig('eth');
   const ethIndexer = new evm.EvmIndexer(createEvmWriters('eth'));
   checkpoint.addIndexer('eth', ethConfig, ethIndexer);
