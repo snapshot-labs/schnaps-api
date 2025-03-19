@@ -17,7 +17,7 @@ const DAYS_PER_MONTH = (365 * 3 + 366) / 48; // Accounting for leap years, which
 const MONTHLY_PRICE_PER_DAY = TURBO_MONTHLY_PRICE / DAYS_PER_MONTH;
 const MONTHLY_PRICE_PER_SECOND = MONTHLY_PRICE_PER_DAY / (24 * 60 * 60); // 24 hours * 60 minutes * 60 seconds
 
-const SNAPSHOT_ADDRESS = '0x1234';
+const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || '0x8C28Cf33d9Fd3D0293f963b1cd27e3FF422B425c';
 
 function getTokenSymbol(tokenAddress: string, chain: string) {
   return tokens[chain][tokenAddress];
@@ -31,8 +31,8 @@ function getTokenSymbol(tokenAddress: string, chain: string) {
 // - If the user has paid for more than a month (but less than a year), the expiration date is extended by the number of months paid
 //   - Then take the surplus and increase the expiration date based on the MONTHLY_PRICE_PER_SECOND
 function computeExpiration(space: Space, payment: Payment, metadata: any, blockTimestamp: number) {
-  // If the payment is from the snapshot address, simply return the expiration date from the metadata
-  if (payment.sender.toLowerCase() === SNAPSHOT_ADDRESS) {
+  // If the payment is from the admin address, simply return the expiration date from the metadata
+  if (payment.sender.toLowerCase() === ADMIN_ADDRESS) {
     return new Date(metadata.params.expiration * MILLISECONDS);
   }
 
