@@ -12,7 +12,7 @@ type Payment {
   block: Int!
   timestamp: Int!
   type: String!
-  beneficiary: String!
+  space: Space
 }
 
 type Space {
