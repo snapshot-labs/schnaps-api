@@ -12,6 +12,10 @@ const dir = __dirname.endsWith('dist/src') ? '../' : '';
 const schemaFile = path.join(__dirname, `${dir}../src/schema.gql`);
 const schema = fs.readFileSync(schemaFile, 'utf8');
 
+if (process.env.CA_CERT) {
+  process.env.CA_CERT = process.env.CA_CERT.replace(/\\n/g, '\n');
+}
+
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
   prettifyLogs: true,
@@ -24,10 +28,6 @@ if (process.env.INDEX_TESTNET) {
   const sepIndexer = new evm.EvmIndexer(createEvmWriters('sep'));
   checkpoint.addIndexer('sep', sepConfig, sepIndexer);
 } else {
-  const baseConfig = createConfig('base');
-  const baseIndexer = new evm.EvmIndexer(createEvmWriters('base'));
-  checkpoint.addIndexer('base', baseConfig, baseIndexer);
-
   const ethConfig = createConfig('eth');
   const ethIndexer = new evm.EvmIndexer(createEvmWriters('eth'));
   checkpoint.addIndexer('eth', ethConfig, ethIndexer);
