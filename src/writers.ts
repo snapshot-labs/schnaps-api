@@ -37,9 +37,7 @@ function computeExpiration(space: Space, payment: Payment, metadata: any, blockT
   }
 
   // If the space already has an expiration date, use it as the current expiration date
-  const currentExpirationTimestamp = space.turbo_expiration_timestamp
-    ? space.turbo_expiration_timestamp
-    : blockTimestamp;
+  const currentExpirationTimestamp = space.turbo_expiration_timestamp ?? blockTimestamp;
   const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
 
   if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
