@@ -110,13 +110,15 @@ export function createEvmWriters(indexerName: string) {
       space = new Space(metadata.params.space, indexerName);
     }
 
-    const expirationDate = computeExpiration(space, payment, metadata, block.timestamp);
-    // We do not save space entity if the computed expiration date is null
-    if (expirationDate !== null) {
-      space.turbo_expiration_timestamp = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
-      space.turbo_expiration_date = expirationDate.toDateString();
-      await space.save();
+    let expirationDate = computeExpiration(space, payment, metadata, block.timestamp);
+    if (expirationDate === null) {
+      expirationDate = new Date(0);
     }
+
+    space.turbo_expiration_timestamp = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
+    space.turbo_expiration_date = expirationDate.toDateString();
+
+    await space.save();
   };
 
   return {
