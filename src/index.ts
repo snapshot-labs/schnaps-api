@@ -12,6 +12,10 @@ const dir = __dirname.endsWith('dist/src') ? '../' : '';
 const schemaFile = path.join(__dirname, `${dir}../src/schema.gql`);
 const schema = fs.readFileSync(schemaFile, 'utf8');
 
+if (process.env.CA_CERT) {
+  process.env.CA_CERT = process.env.CA_CERT.replace(/\\n/g, '\n');
+}
+
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
   prettifyLogs: true,
