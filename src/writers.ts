@@ -30,7 +30,12 @@ function getTokenSymbol(tokenAddress: string, chain: string) {
 //   - Then take the surplus and increase the expiration date based on the YEARLY_PRICE_PER_SECOND
 // - If the user has paid for more than a month (but less than a year), the expiration date is extended by the number of months paid
 //   - Then take the surplus and increase the expiration date based on the MONTHLY_PRICE_PER_SECOND
-function computeExpiration(space: Space, payment: Payment, metadata: any, blockTimestamp: number) {
+function computeExpiration(
+  space: Space,
+  payment: Payment,
+  metadata: any,
+  blockTimestamp: number
+): Date {
   // If the payment is from the admin address, simply return the expiration date from the metadata
   if (payment.sender.toLowerCase() === ADMIN_ADDRESS) {
     return new Date(metadata.params.expiration * MILLISECONDS);
@@ -42,7 +47,7 @@ function computeExpiration(space: Space, payment: Payment, metadata: any, blockT
 
   if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
     // Return early because the payment is not enough to extend the expiration
-    return null;
+    return new Date(0);
   }
 
   const userPaidAtLeastAYear = payment.amount_raw >= TURBO_YEARLY_PRICE;
@@ -108,10 +113,7 @@ export function createEvmWriters(indexerName: string) {
       space = new Space(metadata.params.space, indexerName);
     }
 
-    let expirationDate = computeExpiration(space, payment, metadata, block.timestamp);
-    if (expirationDate === null) {
-      expirationDate = new Date(0);
-    }
+    const expirationDate = computeExpiration(space, payment, metadata, block.timestamp);
 
     space.turbo_expiration_timestamp = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
     space.turbo_expiration_date = expirationDate.toDateString();
