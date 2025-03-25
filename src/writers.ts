@@ -6,7 +6,7 @@ import tokens from './payment_tokens.json';
 const MILLISECONDS = 1000;
 const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
 
-const TURBO_MONTHLY_PRICE = 600 * DECIMALS; // 600 USDC | USDT
+const TURBO_MONTHLY_PRICE = 1 * DECIMALS; // 600 USDC | USDT
 const TURBO_YEARLY_PRICE = 6000 * DECIMALS; // 6000 USDC | USDT
 
 const DAYS_PER_YEAR = (365 * 3 + 366) / 4; // Accounting for leap years, which happens even four year (this is technically incorrect due to leap seconds but it's good enough for this purpose)
@@ -42,7 +42,8 @@ function computeExpiration(
   }
 
   // If the space already has an expiration date, use it as the current expiration date
-  const currentExpirationTimestamp = space.turbo_expiration_timestamp ?? blockTimestamp;
+  const currentExpirationTimestamp =
+    space.turbo_expiration_timestamp == 0 ? blockTimestamp : space.turbo_expiration_timestamp;
   const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
 
   if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
