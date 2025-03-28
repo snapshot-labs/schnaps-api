@@ -43,7 +43,7 @@ function computeExpiration(
 
   // If the space already has an expiration date, use it as the current expiration date
   const currentExpirationTimestamp =
-    space.turbo_expiration_timestamp == 0 ? blockTimestamp : space.turbo_expiration_timestamp;
+    space.turbo_expiration == 0 ? blockTimestamp : space.turbo_expiration;
   const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
 
   if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
@@ -116,7 +116,7 @@ export function createEvmWriters(indexerName: string) {
 
     const expirationDate = computeExpiration(space, payment, metadata, block.timestamp);
 
-    space.turbo_expiration_timestamp = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
+    space.turbo_expiration = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
     space.turbo_expiration_date = expirationDate.toDateString();
 
     await space.save();
