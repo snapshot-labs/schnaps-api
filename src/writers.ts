@@ -6,8 +6,8 @@ import tokens from './payment_tokens.json';
 const MILLISECONDS = 1000;
 const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
 
-const TURBO_MONTHLY_PRICE = 1 * DECIMALS; // 600 USDC | USDT
-const TURBO_YEARLY_PRICE = 6000 * DECIMALS; // 6000 USDC | USDT
+const TURBO_MONTHLY_PRICE = Number(process.env.TURBO_MONTHLY_PRICE) || 600;
+const TURBO_YEARLY_PRICE = Number(process.env.TURBO_YEARLY_PRICE) || 6000;
 
 const DAYS_PER_YEAR = (365 * 3 + 366) / 4; // Accounting for leap years, which happens even four year (this is technically incorrect due to leap seconds but it's good enough for this purpose)
 const YEARLY_PRICE_PER_DAY = TURBO_YEARLY_PRICE / DAYS_PER_YEAR;
@@ -81,7 +81,7 @@ export function createEvmWriters(indexerName: string) {
     const sender = event.args.sender;
     const tokenAddress = event.args.token.toLowerCase();
     const amountRaw = BigInt(event.args.amount);
-    const amountDecimal = Number(amountRaw) / 1e6;
+    const amountDecimal = Number(amountRaw) / DECIMALS;
     const barcode = event.args.barcode;
 
     const tokenSymbol = getTokenSymbol(tokenAddress, indexerName) || '';
