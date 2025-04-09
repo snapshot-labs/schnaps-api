@@ -48,7 +48,13 @@ function computeExpiration(
 
   if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
     // Return early because the payment is not enough to extend the expiration
-    return new Date(0);
+    if (space.turbo_expiration) {
+      // User already had an expiration date, leave it untouched.
+      return expirationDate;
+    } else {
+      // User didn't have an expiration date, leave it to 0
+      return new Date(0);
+    }
   }
 
   const userPaidAtLeastAYear = payment.amount_raw >= TURBO_YEARLY_PRICE;
