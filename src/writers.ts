@@ -84,7 +84,6 @@ function computeExpiration(
 
 export function createEvmWriters(indexerName: string) {
   const handlePaymentReceived: evm.Writer = async ({ block, tx, event }) => {
-    console.log('In handlePaymentReceived');
     if (!block || !event) return;
 
     const sender = event.args.sender;
