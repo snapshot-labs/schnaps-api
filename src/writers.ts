@@ -53,7 +53,7 @@ function computeExpiration(
   }
 
   // If the space already has an expiration date, use it as the current expiration date
-  const currentExpirationTimestamp = Max.math(space.turbo_expiration, blockTimestamp);
+  const currentExpirationTimestamp = Math.max(space.turbo_expiration, blockTimestamp);
   const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
 
   const userPaidAtLeastAYear = payment.amount_raw >= TURBO_YEARLY_PRICE;
