@@ -41,21 +41,24 @@ function computeExpiration(
     return new Date(metadata.params.expiration * MILLISECONDS);
   }
 
-  // If the space already has an expiration date, use it as the current expiration date
-  const currentExpirationTimestamp =
-    space.turbo_expiration == 0 ? blockTimestamp : space.turbo_expiration;
-  const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
-
   if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
     // Return early because the payment is not enough to extend the expiration
     if (space.turbo_expiration) {
       // User already had an expiration date, leave it untouched.
-      return expirationDate;
+      return new Date(space.turbo_expiration * 1000);
     } else {
       // User didn't have an expiration date, leave it to 0
       return new Date(0);
     }
   }
+
+  // If the space already has an expiration date, use it as the current expiration date
+  let currentExpirationTimestamp = space.turbo_expiration || blockTimestamp;
+  if (currentExpirationTimestamp < blockTimestamp) {
+    // Case where a user discontinued the payment and then resumed it
+    currentExpirationTimestamp = blockTimestamp;
+  }
+  const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
 
   const userPaidAtLeastAYear = payment.amount_raw >= TURBO_YEARLY_PRICE;
   if (userPaidAtLeastAYear) {
