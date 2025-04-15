@@ -12,5 +12,11 @@ type Payment {
   block: Int!
   timestamp: Int!
   type: String!
-  beneficiary: String!
+  space: String!
+}
+
+type Space {
+  id: String!
+  turbo_expiration: Int!
+  turbo_expiration_date: String!
 }
