@@ -37,7 +37,7 @@ function computeExpiration(
   blockTimestamp: number
 ): Date {
   // If the payment is from the admin address, simply return the expiration date from the metadata
-  if (payment.sender.toLowerCase() === ADMIN_ADDRESS) {
+  if (payment.sender.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
     return new Date(metadata.params.expiration * MILLISECONDS);
   }
 
