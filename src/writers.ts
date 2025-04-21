@@ -40,7 +40,12 @@ function computeExpiration(
 ): Date {
   // If the payment is from the admin address, simply return the expiration date from the metadata
   if (payment.sender === ADMIN_ADDRESS) {
-    return new Date(metadata.params.expiration * MILLISECONDS);
+    const date = new Date(metadata.params.expiration * MILLISECONDS);
+    if (isNaN(date.getTime())) {
+      return new Date(0);
+    } else {
+      return date;
+    }
   }
 
   if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
