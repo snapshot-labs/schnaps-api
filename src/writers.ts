@@ -17,7 +17,9 @@ const DAYS_PER_MONTH = (365 * 3 + 366) / 48; // Accounting for leap years, which
 const MONTHLY_PRICE_PER_DAY = TURBO_MONTHLY_PRICE / DAYS_PER_MONTH;
 const MONTHLY_PRICE_PER_SECOND = MONTHLY_PRICE_PER_DAY / (24 * 60 * 60); // 24 hours * 60 minutes * 60 seconds
 
-const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || '0x8C28Cf33d9Fd3D0293f963b1cd27e3FF422B425c';
+const ADMIN_ADDRESS = (
+  process.env.ADMIN_ADDRESS || '0x8C28Cf33d9Fd3D0293f963b1cd27e3FF422B425c'
+).toLowerCase();
 
 function getTokenSymbol(tokenAddress: string, chain: string) {
   return tokens[chain][tokenAddress];
@@ -45,7 +47,7 @@ function computeExpiration(
     // Return early because the payment is not enough to extend the expiration
     if (space.turbo_expiration) {
       // User already had an expiration date, leave it untouched.
-      return new Date(space.turbo_expiration * 1000);
+      return new Date(space.turbo_expiration * MILLISECONDS);
     } else {
       // User didn't have an expiration date, leave it to 0
       return new Date(0);
@@ -82,7 +84,7 @@ export function createEvmWriters(indexerName: string) {
   const handlePaymentReceived: evm.Writer = async ({ block, tx, event }) => {
     if (!block || !event) return;
 
-    const sender = event.args.sender;
+    const sender = event.args.sender.toLowerCase();
     const tokenAddress = event.args.token.toLowerCase();
     const amountRaw = BigInt(event.args.amount);
     const amountDecimal = Number(amountRaw) / DECIMALS;
