@@ -5,7 +5,7 @@ const CONFIG = {
   sep: {
     networkNodeUrl: 'https://rpc.brovider.xyz/11155111',
     contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
-    start: 7802789
+    start: 8153049
   },
   eth: {
     networkNodeUrl: 'https://rpc.brovider.xyz/1',
