@@ -39,7 +39,7 @@ function computeExpiration(
   blockTimestamp: number
 ): Date {
   // If the payment is from the admin address, simply return the expiration date from the metadata
-  if (payment.sender === ADMIN_ADDRESS && payment.amount_raw == 0n) {
+  if (payment.sender.toLowerCase() === ADMIN_ADDRESS && payment.amount_raw == 0n) {
     const date = new Date(metadata.params.expiration * MILLISECONDS);
     if (isNaN(date.getTime())) {
       return new Date(0);
@@ -89,7 +89,7 @@ export function createEvmWriters(indexerName: string) {
   const handlePaymentReceived: evm.Writer = async ({ block, tx, event }) => {
     if (!block || !event) return;
 
-    const sender = event.args.sender.toLowerCase();
+    const sender = event.args.sender;
     const tokenAddress = event.args.token.toLowerCase();
     const amountRaw = BigInt(event.args.amount);
     const amountDecimal = Number(amountRaw) / DECIMALS;
