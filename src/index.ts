@@ -8,6 +8,7 @@ import { createConfig } from './config';
 import { createEvmWriters } from './writers';
 import overrides from './overrides.json';
 
+const PRODUCTION_INDEXER_DELAY = 60 * 1000;
 const dir = __dirname.endsWith('dist/src') ? '../' : '';
 const schemaFile = path.join(__dirname, `${dir}../src/schema.gql`);
 const schema = fs.readFileSync(schemaFile, 'utf8');
@@ -15,6 +16,8 @@ const schema = fs.readFileSync(schemaFile, 'utf8');
 if (process.env.CA_CERT) {
   process.env.CA_CERT = process.env.CA_CERT.replace(/\\n/g, '\n');
 }
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
@@ -34,6 +37,11 @@ if (process.env.INDEX_TESTNET) {
 }
 
 async function run() {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('Delaying indexer to prevent multiple processes indexing at the same time.');
+    await sleep(PRODUCTION_INDEXER_DELAY);
+  }
+
   await checkpoint.resetMetadata();
   await checkpoint.reset();
   await checkpoint.start();
