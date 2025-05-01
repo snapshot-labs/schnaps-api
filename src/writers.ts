@@ -2,6 +2,7 @@ import { evm } from '@snapshot-labs/checkpoint';
 import { Payment, Space } from '../.checkpoint/models';
 import { getJSON } from './utils';
 import tokens from './payment_tokens.json';
+import { notifyPayment } from './discord';
 
 const MILLISECONDS = 1000;
 const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
@@ -131,6 +132,8 @@ export function createEvmWriters(indexerName: string) {
     space.turbo_expiration_date = expirationDate.toDateString();
 
     await space.save();
+
+    notifyPayment(payment, space, block, tx);
   };
 
   return {
