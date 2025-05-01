@@ -18,9 +18,9 @@ export async function notifyPayment(
 
   const content = `**New payment of ${payment.amount_decimal} ${payment.token_symbol} for [${
     payment.space
-  }](https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box/#/s${INDEX_TESTNET ? '-tn' : ''}:${
-    payment.space
-  })**\nFrom [${payment.sender}](https://${INDEX_TESTNET ? 'sepolia.' : ''}etherscan.io/address/${
+  }](https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box/#/${payment.space})**\nFrom [${
+    payment.sender
+  }](https://${INDEX_TESTNET ? 'sepolia.' : ''}etherscan.io/address/${
     payment.sender
   }), expiration : ${space.turbo_expiration_date}\n<https://${
     INDEX_TESTNET ? 'sepolia.' : ''
