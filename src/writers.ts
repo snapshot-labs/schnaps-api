@@ -109,13 +109,12 @@ export function createEvmWriters(indexerName: string) {
     const metadata = await getJSON(barcode);
 
     payment.block = block.number;
+    payment.timestamp = block.timestamp;
     payment.type = metadata.type;
 
-    if (payment.type === 'turbo') {
-      payment.space = metadata.params.space;
-    }
+    if (metadata.ref && typeof metadata.ref === 'string') payment.ref = metadata.ref;
 
-    payment.timestamp = block.timestamp;
+    if (payment.type === 'turbo') payment.space = metadata.params.space;
 
     await payment.save();
 
