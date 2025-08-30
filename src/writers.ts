@@ -22,6 +22,10 @@ const ADMIN_ADDRESS = (
   process.env.ADMIN_ADDRESS || '0x8C28Cf33d9Fd3D0293f963b1cd27e3FF422B425c'
 ).toLowerCase();
 
+const MIGRATED_TURBO_SPACES = {
+  's:mimo.eth': 's:parallel-protocol.eth'
+};
+
 function getTokenSymbol(tokenAddress: string, chain: string) {
   return tokens[chain][tokenAddress];
 }
@@ -107,6 +111,8 @@ export function createEvmWriters(indexerName: string) {
 
     payment.barcode = barcode;
     const metadata = await getJSON(barcode);
+    metadata.params.space = MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
+    console.log('Payment received for space', metadata.params.space);
 
     payment.block = block.number;
     payment.timestamp = block.timestamp;
