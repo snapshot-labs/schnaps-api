@@ -23,7 +23,8 @@ const ADMIN_ADDRESS = (
 ).toLowerCase();
 
 const MIGRATED_TURBO_SPACES = {
-  's:mimo.eth': 's:parallel-protocol.eth'
+  's:mimo.eth': 's:parallel-protocol.eth',
+  's:aventus.eth': 's:aventus-gov.eth'
 };
 
 function getTokenSymbol(tokenAddress: string, chain: string) {
