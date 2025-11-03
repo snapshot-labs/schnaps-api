@@ -80,10 +80,6 @@ export async function checkIfInSync(syncThresholdBlocks: number): Promise<boolea
     const latestBlock = await getLatestBlockNumber();
     const blocksBehind = latestBlock - lastIndexedBlock;
 
-    console.log(
-      `Last indexed block: ${lastIndexedBlock}, Latest block: ${latestBlock}, Behind: ${blocksBehind}`
-    );
-
     if (lastIndexedBlock > 0 && blocksBehind <= syncThresholdBlocks) {
       return true;
     }
