@@ -19,22 +19,17 @@ if (process.env.CA_CERT) {
   process.env.CA_CERT = process.env.CA_CERT.replace(/\\n/g, '\n');
 }
 
+const network = process.env.INDEX_TESTNET ? 'sep' : 'eth';
+export const config = createConfig(network);
+
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
   prettifyLogs: true,
   overridesConfig: overrides
 });
 
-if (process.env.INDEX_TESTNET) {
-  // Only index testnets
-  const sepConfig = createConfig('sep');
-  const sepIndexer = new evm.EvmIndexer(createEvmWriters('sep'));
-  checkpoint.addIndexer('sep', sepConfig, sepIndexer);
-} else {
-  const ethConfig = createConfig('eth');
-  const ethIndexer = new evm.EvmIndexer(createEvmWriters('eth'));
-  checkpoint.addIndexer('eth', ethConfig, ethIndexer);
-}
+const indexer = new evm.EvmIndexer(createEvmWriters(network));
+checkpoint.addIndexer(network, config, indexer);
 
 async function run() {
   if (process.env.NODE_ENV === 'production') {

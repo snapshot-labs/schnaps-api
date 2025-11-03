@@ -1,4 +1,4 @@
-import { getRpcUrl } from './config';
+import { config } from '.';
 
 export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   const ipfsGateway = `https://${gateway}`;
@@ -24,8 +24,7 @@ export async function getJSON(uri: string) {
 }
 
 export async function getLatestBlockNumber(): Promise<number> {
-  const rpcUrl = getRpcUrl();
-  const response = await fetch(rpcUrl, {
+  const response = await fetch(config.network_node_url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
