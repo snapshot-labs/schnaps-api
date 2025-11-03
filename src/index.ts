@@ -7,6 +7,8 @@ import Checkpoint, { evm, LogLevel } from '@snapshot-labs/checkpoint';
 import { createConfig } from './config';
 import { createEvmWriters } from './writers';
 import overrides from './overrides.json';
+import { startExpirationMonitor } from './expirationMonitor';
+import { sleep } from './utils';
 
 const PRODUCTION_INDEXER_DELAY = 60 * 1000;
 const dir = __dirname.endsWith('dist/src') ? '../' : '';
@@ -16,8 +18,6 @@ const schema = fs.readFileSync(schemaFile, 'utf8');
 if (process.env.CA_CERT) {
   process.env.CA_CERT = process.env.CA_CERT.replace(/\\n/g, '\n');
 }
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
@@ -44,7 +44,8 @@ async function run() {
 
   await checkpoint.resetMetadata();
   await checkpoint.reset();
-  await checkpoint.start();
+  checkpoint.start();
+  startExpirationMonitor();
 }
 
 run();

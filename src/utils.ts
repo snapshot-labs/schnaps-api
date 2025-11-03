@@ -1,3 +1,5 @@
+import { getRpcUrl } from './config';
+
 export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   const ipfsGateway = `https://${gateway}`;
   if (!uri) return null;
@@ -20,3 +22,22 @@ export async function getJSON(uri: string) {
 
   return fetch(url).then(res => res.json());
 }
+
+export async function getLatestBlockNumber(): Promise<number> {
+  const rpcUrl = getRpcUrl();
+  const response = await fetch(rpcUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'eth_blockNumber',
+      params: [],
+      id: 1
+    })
+  });
+
+  const data = await response.json();
+  return parseInt(data.result, 16);
+}
+
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

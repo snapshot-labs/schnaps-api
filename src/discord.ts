@@ -1,7 +1,11 @@
 import { Payment, Space } from '../.checkpoint/models';
+import { ExpiringSpace } from './queries';
+import { NOTIFICATION_CONFIG } from './expirationMonitor';
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const INDEX_TESTNET = process.env.INDEX_TESTNET;
+
+const SNAPSHOT_BASE_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box`;
 
 export async function notifyPayment(
   payment: Payment,
@@ -17,7 +21,6 @@ export async function notifyPayment(
   if (block.timestamp < recentThreshold) return;
 
   const explorerBaseUrl = `https://${INDEX_TESTNET ? 'sepolia.' : ''}etherscan.io`;
-  const snapshotBaseUrl = `https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box`;
 
   await fetch(DISCORD_WEBHOOK_URL, {
     method: 'POST',
@@ -35,7 +38,7 @@ export async function notifyPayment(
           fields: [
             {
               name: 'Space',
-              value: `[${payment.space}](${snapshotBaseUrl}/#/${payment.space})`,
+              value: `[${payment.space}](${SNAPSHOT_BASE_URL}/#/${payment.space})`,
               inline: true
             },
             {
@@ -56,4 +59,24 @@ export async function notifyPayment(
   });
 
   return;
+}
+
+export async function notifyExpiringSpaces(spaces: ExpiringSpace[]): Promise<void> {
+  if (!DISCORD_WEBHOOK_URL || spaces.length === 0) return;
+
+  const spaceLinks = spaces
+    .map(space => {
+      const config = NOTIFICATION_CONFIG[space.daysLeft];
+      const emoji = config.emoji;
+      return `${emoji} **[${space.id}](${SNAPSHOT_BASE_URL}/#/s:${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`;
+    })
+    .join('\n');
+
+  const content = `💸 **Pro spaces expiring soon**\n\n${spaceLinks}`;
+
+  await fetch(DISCORD_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  });
 }

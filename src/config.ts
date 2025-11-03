@@ -14,6 +14,10 @@ const CONFIG = {
   }
 };
 
+export function getRpcUrl(): string {
+  return CONFIG[process.env.INDEX_TESTNET ? 'sep' : 'eth'].networkNodeUrl;
+}
+
 export function createConfig(indexerName: keyof typeof CONFIG): CheckpointConfig {
   const { networkNodeUrl, contract, start } = CONFIG[indexerName];
 
