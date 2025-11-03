@@ -671,11 +671,6 @@ array-union@^2.1.0:
   resolved "https://registry.npmjs.org/array-union/-/array-union-2.1.0.tgz"
   integrity sha512-HGyxoOTYUyCM6stUe6EJgnd4EoewAI7zMdfqO+kGjnlZmBDz/cR5pf8r/cR4Wq60sL/p0IkcjUEEPwS3GFrIyw==
 
-assert-options@0.8.3:
-  version "0.8.3"
-  resolved "https://registry.npmjs.org/assert-options/-/assert-options-0.8.3.tgz"
-  integrity sha512-s6v4HnA+vYSGO4eZX+F+I3gvF74wPk+m6Z1Q3w1Dsg4Pnv/R24vhKAasoMVZGvDpOOfTg1Qz4ptZnEbuy95XsQ==
-
 atomic-sleep@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/atomic-sleep/-/atomic-sleep-1.0.0.tgz"
@@ -2010,25 +2005,10 @@ pg-int8@1.0.1:
   resolved "https://registry.npmjs.org/pg-int8/-/pg-int8-1.0.1.tgz"
   integrity sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==
 
-pg-minify@1.8.0:
-  version "1.8.0"
-  resolved "https://registry.npmjs.org/pg-minify/-/pg-minify-1.8.0.tgz"
-  integrity sha512-jO/oJOununpx8DzKgvSsWm61P8JjwXlaxSlbbfTBo1nvSWoo/+I6qZYaSN96jm/KDwa5d+JMQwPGgcP6HXDRow==
-
 pg-pool@^3.10.1:
   version "3.10.1"
   resolved "https://registry.npmjs.org/pg-pool/-/pg-pool-3.10.1.tgz"
   integrity sha512-Tu8jMlcX+9d8+QVzKIvM/uJtp07PKr82IUOYEphaWcoBhIYkoHpLXN3qO59nAI11ripznDsEzEv8nUxBVWajGg==
-
-pg-promise@^12.2.0:
-  version "12.2.0"
-  resolved "https://registry.npmjs.org/pg-promise/-/pg-promise-12.2.0.tgz"
-  integrity sha512-th+GB7ftaRv5gAjSVslURSaYr5gf8d+T9/h5dZTJ/uyMqnQV8lJ8cDo3p5Crv3rprLC8ZCav9yLFcMKnobib+g==
-  dependencies:
-    assert-options "0.8.3"
-    pg "8.16.3"
-    pg-minify "1.8.0"
-    spex "4.0.2"
 
 pg-protocol@^1.10.3:
   version "1.10.3"
@@ -2046,7 +2026,7 @@ pg-types@2.2.0:
     postgres-date "~1.0.4"
     postgres-interval "^1.1.0"
 
-pg@8.16.3, pg@^8.10.0:
+pg@^8.10.0:
   version "8.16.3"
   resolved "https://registry.npmjs.org/pg/-/pg-8.16.3.tgz"
   integrity sha512-enxc1h0jA/aq5oSDMvqyW3q89ra6XIIDZgCX9vkMrnz5DFTw/Ny3Li2lFQ+pt3L6MCgm/5o2o8HW9hiJji+xvw==
@@ -2450,11 +2430,6 @@ sonic-boom@^3.1.0:
   integrity sha512-SbbZ+Kqj/XIunvIAgUZRlqd6CGQYq71tRRbXR92Za8J/R3Yh4Av+TWENiSiEgnlwckYLyP0YZQWVfyNC0dzLaA==
   dependencies:
     atomic-sleep "^1.0.0"
-
-spex@4.0.2:
-  version "4.0.2"
-  resolved "https://registry.npmjs.org/spex/-/spex-4.0.2.tgz"
-  integrity sha512-/8VnouFOkRlkfj/sDN6GYnRKCutBHjUndkg6oAgv374VvjYQRzzR2gTEXRsmFmgd1SrbI8W948iTDnkEkUieCw==
 
 split2@^4.0.0:
   version "4.1.0"

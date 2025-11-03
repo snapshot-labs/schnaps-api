@@ -1,6 +1,5 @@
 import { Payment, Space } from '../.checkpoint/models';
-import { ExpiringSpace } from './queries';
-import { NOTIFICATION_CONFIG } from './expirationMonitor';
+import { CategorizedSpaces } from './queries';
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const INDEX_TESTNET = process.env.INDEX_TESTNET;
@@ -61,22 +60,47 @@ export async function notifyPayment(
   return;
 }
 
-export async function notifyExpiringSpaces(spaces: ExpiringSpace[]): Promise<void> {
-  if (!DISCORD_WEBHOOK_URL || spaces.length === 0) return;
+export async function sendExpirationNotification(
+  categorizedSpaces: CategorizedSpaces
+): Promise<void> {
+  if (!DISCORD_WEBHOOK_URL) return;
+  const { expired, expiring } = categorizedSpaces;
 
-  const spaceLinks = spaces
-    .map(space => {
-      const config = NOTIFICATION_CONFIG[space.daysLeft];
-      const emoji = config.emoji;
-      return `${emoji} **[${space.id}](${SNAPSHOT_BASE_URL}/#/s:${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`;
-    })
-    .join('\n');
+  try {
+    const sections: string[] = ['💸 **Snapshot pro: Expired & Expiring**'];
 
-  const content = `💸 **Pro spaces expiring soon**\n\n${spaceLinks}`;
+    if (expired.length > 0) {
+      sections.push('\n**💀 Expired (within last 7 days)**');
+      sections.push(
+        ...expired.map(
+          space =>
+            `❌ **[${space.id}](${SNAPSHOT_BASE_URL}/#/s:${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`
+        )
+      );
+    }
 
-  await fetch(DISCORD_WEBHOOK_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content })
-  });
+    if (expiring.length > 0) {
+      sections.push('\n**⏰ Expiring soon (next 7 days)**');
+      sections.push(
+        ...expiring.map(
+          space =>
+            `⚠️ **[${space.id}](${SNAPSHOT_BASE_URL}/#/s:${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`
+        )
+      );
+    }
+
+    const response = await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: sections.join('\n') })
+    });
+    if (!response.ok) throw new Error(`Discord webhook responded with status ${response.status}`);
+    console.log(
+      `Sent notification for ${expired.length + expiring.length} spaces (${
+        expired.length
+      } expired, ${expiring.length} expiring)`
+    );
+  } catch (error) {
+    console.error('Failed to send expiration notification:', error);
+  }
 }

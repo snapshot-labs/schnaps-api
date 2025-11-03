@@ -1,75 +1,57 @@
-import db from './db';
+import { register } from '@snapshot-labs/checkpoint/dist/src/register';
 import { getLatestBlockNumber } from './utils';
 
-export interface ExpiringSpace {
+export interface Space {
   id: string;
-  daysLeft: number;
   expiration: number;
-  key: string;
 }
 
-export async function getExpiringSpacesForNotification(
-  notificationDays: number[]
-): Promise<ExpiringSpace[]> {
+export interface CategorizedSpaces {
+  expired: Space[];
+  expiring: Space[];
+}
+
+export async function getCategorizedSpaces(): Promise<CategorizedSpaces> {
   try {
+    const db = register.getKnex();
     const now = ~~(Date.now() / 1e3);
     const oneDaySeconds = 24 * 60 * 60;
 
-    const windows = notificationDays.map(days => ({
-      days,
-      start: now + (days - 1) * oneDaySeconds,
-      end: now + days * oneDaySeconds
-    }));
+    const sevenDaysAgo = now - 7 * oneDaySeconds;
+    const sevenDaysFromNow = now + 7 * oneDaySeconds;
 
-    const conditions = windows
-      .map((_, i) => `(turbo_expiration BETWEEN $${i * 3 + 1} AND $${i * 3 + 2})`)
-      .join(' OR ');
-    const caseStatements = windows
-      .map(
-        (_, i) => `WHEN turbo_expiration BETWEEN $${i * 3 + 1} AND $${i * 3 + 2} THEN $${i * 3 + 3}`
-      )
-      .join('\n               ');
+    const spaces = await db('spaces')
+      .select('id', 'turbo_expiration')
+      .whereBetween('turbo_expiration', [sevenDaysAgo, sevenDaysFromNow])
+      .distinctOn('id')
+      .orderByRaw('id, upper_inf(block_range) DESC, upper(block_range) DESC');
 
-    const query = `
-      SELECT DISTINCT ON (id) id, turbo_expiration,
-             CASE 
-               ${caseStatements}
-             END as days_left
-      FROM spaces 
-      WHERE ${conditions}
-      ORDER BY id, (block_range::int8range).upper DESC
-    `;
+    const allSpaces: Space[] = spaces
+      .map(space => ({
+        id: space.id,
+        expiration: space.turbo_expiration
+      }))
+      .sort((a, b) => a.expiration - b.expiration);
 
-    const params = windows.flatMap(w => [w.start, w.end, w.days]);
+    const expired = allSpaces.filter(space => space.expiration < now);
+    const expiring = allSpaces.filter(space => space.expiration >= now);
 
-    const spaces = await db.query(query, params);
-
-    return spaces
-      .map(space => {
-        const daysLeft = parseFloat(space.days_left);
-        const expiration = space.turbo_expiration;
-        return {
-          id: space.id,
-          daysLeft,
-          expiration,
-          key: `${space.id}-${daysLeft}-${expiration}`
-        };
-      })
-      .sort((a, b) => b.expiration - a.expiration);
+    return { expired, expiring };
   } catch (error) {
-    console.error('Error getting expiring spaces for notification:', error);
-    return [];
+    console.error('Error getting categorized spaces:', error);
+    return { expired: [], expiring: [] };
   }
 }
 
 export async function checkIfInSync(syncThresholdBlocks: number): Promise<boolean> {
   try {
+    const db = register.getKnex();
     const indexerName = process.env.INDEX_TESTNET ? 'sep' : 'eth';
 
-    const result = await db.oneOrNone(
-      `SELECT value FROM _metadatas WHERE id = 'last_indexed_block' AND indexer = $1`,
-      [indexerName]
-    );
+    const result = await db('_metadatas')
+      .where('id', 'last_indexed_block')
+      .andWhere('indexer', indexerName)
+      .first();
 
     if (!result?.value) {
       console.log('No indexed blocks yet, skipping expiration check...');
@@ -87,10 +69,6 @@ export async function checkIfInSync(syncThresholdBlocks: number): Promise<boolea
     console.log(`Not in sync (${blocksBehind} blocks behind), skipping expiration check...`);
     return false;
   } catch (error: any) {
-    if (error?.code === '42P01') {
-      console.log('Checkpoint not initialized yet, skipping expiration check...');
-      return false;
-    }
     console.log('Error checking sync status:', error?.message || error);
     return false;
   }
