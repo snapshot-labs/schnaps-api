@@ -1,3 +1,4 @@
+import { GetBlockReturnType } from 'viem';
 import { CategorizedSpaces } from './queries';
 import { Payment, Space } from '../.checkpoint/models';
 
@@ -11,7 +12,7 @@ const SNAPSHOT_BASE_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.bo
 export async function notifyPayment(
   payment: Payment,
   space: Space,
-  block: any,
+  block: GetBlockReturnType,
   txHash: string
 ): Promise<void> {
   if (!DISCORD_WEBHOOK_URL) return;

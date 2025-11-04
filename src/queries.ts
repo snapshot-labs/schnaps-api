@@ -1,4 +1,4 @@
-import { register } from '@snapshot-labs/checkpoint/dist/src/register';
+import { Knex } from 'knex';
 
 export interface Space {
   id: string;
@@ -10,13 +10,14 @@ export interface CategorizedSpaces {
   expiring: Space[];
 }
 
-export async function getExpiringSpaces(): Promise<CategorizedSpaces> {
+export async function getExpiringSpaces(
+  knex: Knex
+): Promise<CategorizedSpaces> {
   try {
-    const db = register.getKnex();
     const now = ~~(Date.now() / 1e3);
     const sevenDays = 7 * 24 * 60 * 60;
 
-    const spaces = await db('spaces')
+    const spaces = await knex('spaces')
       .select('id', 'turbo_expiration')
       .whereBetween('turbo_expiration', [now - sevenDays, now + sevenDays])
       .distinctOn('id')
@@ -39,13 +40,13 @@ export async function getExpiringSpaces(): Promise<CategorizedSpaces> {
   }
 }
 
-export async function getLatestIndexedBlock(): Promise<number> {
+export async function getLatestIndexedBlock(knex: Knex): Promise<number> {
   try {
-    const db = register.getKnex();
-    const result = await db('_metadatas')
+    const indexerName = process.env.INDEX_TESTNET ? 'sep' : 'eth';
+    const result = await knex('_metadatas')
       .where({
         id: 'last_indexed_block',
-        indexer: process.env.INDEX_TESTNET ? 'sep' : 'eth'
+        indexer: indexerName
       })
       .first();
 

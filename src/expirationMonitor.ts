@@ -1,4 +1,4 @@
-import { CheckpointConfig } from '@snapshot-labs/checkpoint';
+import Checkpoint, { CheckpointConfig } from '@snapshot-labs/checkpoint';
 import { createPublicClient, http } from 'viem';
 import { sendExpirationNotification } from './discord';
 import { getExpiringSpaces, getLatestIndexedBlock } from './queries';
@@ -9,6 +9,7 @@ const OUT_OF_SYNC_CHECK_INTERVAL_MS = 10 * 6e4; // 10 minutes
 const SYNC_THRESHOLD_BLOCKS = 200; // Number of blocks to consider indexer in sync
 
 export async function startExpirationMonitor(
+  checkpoint: Checkpoint,
   config: CheckpointConfig
 ): Promise<void> {
   if (!process.env.DISCORD_EXPIRATION_WEBHOOK_URL) {
@@ -18,12 +19,13 @@ export async function startExpirationMonitor(
     return;
   }
 
+  const knex = checkpoint.getBaseContext().knex;
   const client = createPublicClient({
     transport: http(config.network_node_url)
   });
 
   while (true) {
-    const lastIndexedBlock = await getLatestIndexedBlock();
+    const lastIndexedBlock = await getLatestIndexedBlock(knex);
     const latestBlock = Number(await client.getBlockNumber());
     const blocksBehind = latestBlock - lastIndexedBlock;
     const inSync = blocksBehind <= SYNC_THRESHOLD_BLOCKS;
@@ -33,7 +35,7 @@ export async function startExpirationMonitor(
         `Not in sync (${blocksBehind} blocks behind), skipping expiration check...`
       );
     } else {
-      const { expired, expiring } = await getExpiringSpaces();
+      const { expired, expiring } = await getExpiringSpaces(knex);
       if (expired.length > 0 || expiring.length > 0) {
         await sendExpirationNotification({ expired, expiring });
       }

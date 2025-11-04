@@ -42,7 +42,7 @@ async function run() {
   await checkpoint.resetMetadata();
   await checkpoint.reset();
   checkpoint.start();
-  startExpirationMonitor(config);
+  startExpirationMonitor(checkpoint, config);
 }
 
 run();
