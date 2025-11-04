@@ -107,7 +107,7 @@ export async function sendExpirationNotification(
         expired.length
       } expired, ${expiring.length} expiring)`
     );
-  } catch (error) {
-    console.error('Failed to send expiration notification:', error);
+  } catch (err) {
+    console.error('Failed to send expiration notification:', err);
   }
 }
