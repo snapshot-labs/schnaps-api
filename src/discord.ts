@@ -2,6 +2,7 @@ import { Payment, Space } from '../.checkpoint/models';
 import { CategorizedSpaces } from './queries';
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const DISCORD_EXPIRATION_WEBHOOK_URL = process.env.DISCORD_EXPIRATION_WEBHOOK_URL;
 const INDEX_TESTNET = process.env.INDEX_TESTNET;
 
 const SNAPSHOT_BASE_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box`;
@@ -63,7 +64,7 @@ export async function notifyPayment(
 export async function sendExpirationNotification(
   categorizedSpaces: CategorizedSpaces
 ): Promise<void> {
-  if (!DISCORD_WEBHOOK_URL) return;
+  if (!DISCORD_EXPIRATION_WEBHOOK_URL) return;
   const { expired, expiring } = categorizedSpaces;
 
   try {
@@ -89,7 +90,7 @@ export async function sendExpirationNotification(
       );
     }
 
-    const response = await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await fetch(DISCORD_EXPIRATION_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: sections.join('\n') })
