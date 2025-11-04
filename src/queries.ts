@@ -1,5 +1,6 @@
 import { register } from '@snapshot-labs/checkpoint/dist/src/register';
-import { getLatestBlockNumber } from './utils';
+import { createPublicClient, http } from 'viem';
+import { config } from '.';
 
 export interface Space {
   id: string;
@@ -11,7 +12,16 @@ export interface CategorizedSpaces {
   expiring: Space[];
 }
 
-export async function getCategorizedSpaces(): Promise<CategorizedSpaces> {
+async function getLatestBlockNumber(): Promise<number> {
+  const client = createPublicClient({
+    transport: http(config.network_node_url)
+  });
+
+  const blockNumber = await client.getBlockNumber();
+  return Number(blockNumber);
+}
+
+export async function getExpiringSpaces(): Promise<CategorizedSpaces> {
   try {
     const db = register.getKnex();
     const now = ~~(Date.now() / 1e3);

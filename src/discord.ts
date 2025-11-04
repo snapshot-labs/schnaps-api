@@ -10,7 +10,7 @@ export async function notifyPayment(
   payment: Payment,
   space: Space,
   block: any,
-  tx: any
+  txHash: string
 ): Promise<void> {
   if (!DISCORD_WEBHOOK_URL) return;
 
@@ -28,7 +28,7 @@ export async function notifyPayment(
       embeds: [
         {
           title: `💰 New payment of ${payment.amount_decimal} ${payment.token_symbol}`,
-          url: `${explorerBaseUrl}/tx/${tx.hash}`,
+          url: `${explorerBaseUrl}/tx/${txHash}`,
           author: {
             name: payment.sender,
             icon_url: `https://cdn.stamp.fyi/avatar/${payment.sender}`,
@@ -67,7 +67,7 @@ export async function sendExpirationNotification(
   const { expired, expiring } = categorizedSpaces;
 
   try {
-    const sections: string[] = ['💸 **Snapshot pro: Expired & Expiring**'];
+    const sections: string[] = ['💸 **Snapshot Pro expirations**'];
 
     if (expired.length > 0) {
       sections.push('\n**💀 Expired (within last 7 days)**');

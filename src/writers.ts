@@ -4,6 +4,13 @@ import { getJSON } from './utils';
 import tokens from './payment_tokens.json';
 import { notifyPayment } from './discord';
 
+type PaymentReceivedArgs = {
+  sender: string;
+  token: string;
+  amount: bigint;
+  barcode: string;
+};
+
 const MILLISECONDS = 1000;
 const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
 
@@ -93,18 +100,17 @@ function computeExpiration(
 }
 
 export function createEvmWriters(indexerName: string) {
-  const handlePaymentReceived: evm.Writer = async ({ block, tx, event }) => {
-    if (!block || !event) return;
+  const handlePaymentReceived: evm.Writer = async ({ block, txId, event }) => {
+    if (!block || !event || !('args' in event)) return;
 
-    const sender = event.args.sender;
-    const tokenAddress = event.args.token.toLowerCase();
-    const amountRaw = BigInt(event.args.amount);
+    const { sender, token, amount, barcode } = event.args as PaymentReceivedArgs;
+    const tokenAddress = token.toLowerCase();
+    const amountRaw = BigInt(amount);
     const amountDecimal = Number(amountRaw) / DECIMALS;
-    const barcode = event.args.barcode;
 
     const tokenSymbol = getTokenSymbol(tokenAddress, indexerName) || '';
 
-    const payment = new Payment(tx.hash, indexerName);
+    const payment = new Payment(txId, indexerName);
     payment.sender = sender;
     payment.token_address = tokenAddress;
     payment.token_symbol = tokenSymbol;
@@ -116,8 +122,8 @@ export function createEvmWriters(indexerName: string) {
     metadata.params.space = MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
     console.log('Payment received for space', metadata.params.space);
 
-    payment.block = block.number;
-    payment.timestamp = block.timestamp;
+    payment.block = Number(block.number);
+    payment.timestamp = Number(block.timestamp);
     payment.type = metadata.type;
 
     if (metadata.ref && typeof metadata.ref === 'string') payment.ref = metadata.ref;
@@ -133,14 +139,14 @@ export function createEvmWriters(indexerName: string) {
       space = new Space(metadata.params.space, indexerName);
     }
 
-    const expirationDate = computeExpiration(space, payment, metadata, block.timestamp);
+    const expirationDate = computeExpiration(space, payment, metadata, Number(block.timestamp));
 
     space.turbo_expiration = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
     space.turbo_expiration_date = expirationDate.toDateString();
 
     await space.save();
 
-    notifyPayment(payment, space, block, tx);
+    notifyPayment(payment, space, block, txId);
   };
 
   return {
