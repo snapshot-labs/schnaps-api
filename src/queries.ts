@@ -1,5 +1,4 @@
 import { register } from '@snapshot-labs/checkpoint/dist/src/register';
-import { getLatestBlockNumber } from './utils';
 
 export interface Space {
   id: string;
@@ -34,42 +33,25 @@ export async function getExpiringSpaces(): Promise<CategorizedSpaces> {
       expired: allSpaces.filter(space => space.expiration < now),
       expiring: allSpaces.filter(space => space.expiration >= now)
     };
-  } catch (error) {
-    console.error('Error getting expiring spaces:', error);
+  } catch (err) {
+    console.error('Error getting expiring spaces:', err);
     return { expired: [], expiring: [] };
   }
 }
 
-export async function checkIfInSync(
-  syncThresholdBlocks: number
-): Promise<boolean> {
+export async function getLatestIndexedBlock(): Promise<number> {
   try {
     const db = register.getKnex();
-    const indexerName = process.env.INDEX_TESTNET ? 'sep' : 'eth';
-
     const result = await db('_metadatas')
-      .where({ id: 'last_indexed_block', indexer: indexerName })
+      .where({
+        id: 'last_indexed_block',
+        indexer: process.env.INDEX_TESTNET ? 'sep' : 'eth'
+      })
       .first();
 
-    if (!result?.value) {
-      console.log('No indexed blocks yet, skipping expiration check...');
-      return false;
-    }
-
-    const lastIndexedBlock = parseInt(result.value);
-    const latestBlock = await getLatestBlockNumber();
-    const blocksBehind = latestBlock - lastIndexedBlock;
-
-    if (blocksBehind <= syncThresholdBlocks) {
-      return true;
-    }
-
-    console.log(
-      `Not in sync (${blocksBehind} blocks behind), skipping expiration check...`
-    );
-    return false;
-  } catch (error: any) {
-    console.error('Error checking sync status:', error?.message || error);
-    return false;
+    return result?.value ? parseInt(result.value) : 0;
+  } catch (err: any) {
+    console.error('Error getting latest indexed block:', err);
+    return 0;
   }
 }

@@ -1,6 +1,3 @@
-import { createPublicClient, http } from 'viem';
-import { config } from '.';
-
 export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   const ipfsGateway = `https://${gateway}`;
   if (!uri) return null;
@@ -28,12 +25,3 @@ export async function getJSON(uri: string) {
 
 export const sleep = (ms: number) =>
   new Promise(resolve => setTimeout(resolve, ms));
-
-export async function getLatestBlockNumber(): Promise<number> {
-  const client = createPublicClient({
-    transport: http(config.network_node_url)
-  });
-
-  const blockNumber = await client.getBlockNumber();
-  return Number(blockNumber);
-}

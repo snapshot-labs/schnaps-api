@@ -20,7 +20,7 @@ if (process.env.CA_CERT) {
 }
 
 const network = process.env.INDEX_TESTNET ? 'sep' : 'eth';
-export const config = createConfig(network);
+const config = createConfig(network);
 
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
@@ -42,7 +42,7 @@ async function run() {
   await checkpoint.resetMetadata();
   await checkpoint.reset();
   checkpoint.start();
-  startExpirationMonitor();
+  startExpirationMonitor(config);
 }
 
 run();
