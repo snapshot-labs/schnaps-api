@@ -40,7 +40,9 @@ export async function getExpiringSpaces(): Promise<CategorizedSpaces> {
   }
 }
 
-export async function checkIfInSync(syncThresholdBlocks: number): Promise<boolean> {
+export async function checkIfInSync(
+  syncThresholdBlocks: number
+): Promise<boolean> {
   try {
     const db = register.getKnex();
     const indexerName = process.env.INDEX_TESTNET ? 'sep' : 'eth';
@@ -62,7 +64,9 @@ export async function checkIfInSync(syncThresholdBlocks: number): Promise<boolea
       return true;
     }
 
-    console.log(`Not in sync (${blocksBehind} blocks behind), skipping expiration check...`);
+    console.log(
+      `Not in sync (${blocksBehind} blocks behind), skipping expiration check...`
+    );
     return false;
   } catch (error: any) {
     console.error('Error checking sync status:', error?.message || error);

@@ -1,8 +1,8 @@
 import { evm } from '@snapshot-labs/checkpoint';
-import { Payment, Space } from '../.checkpoint/models';
-import { getJSON } from './utils';
-import tokens from './payment_tokens.json';
 import { notifyPayment } from './discord';
+import tokens from './payment_tokens.json';
+import { getJSON } from './utils';
+import { Payment, Space } from '../.checkpoint/models';
 
 type PaymentReceivedArgs = {
   sender: string;
@@ -53,7 +53,10 @@ function computeExpiration(
   blockTimestamp: number
 ): Date {
   // If the payment is from the admin address, simply return the expiration date from the metadata
-  if (payment.sender.toLowerCase() === ADMIN_ADDRESS && payment.amount_raw == 0n) {
+  if (
+    payment.sender.toLowerCase() === ADMIN_ADDRESS &&
+    payment.amount_raw == 0n
+  ) {
     const date = new Date(metadata.params.expiration * MILLISECONDS);
     if (isNaN(date.getTime())) {
       return new Date(0);
@@ -74,7 +77,10 @@ function computeExpiration(
   }
 
   // If the space already has an expiration date, use it as the current expiration date
-  const currentExpirationTimestamp = Math.max(space.turbo_expiration, blockTimestamp);
+  const currentExpirationTimestamp = Math.max(
+    space.turbo_expiration,
+    blockTimestamp
+  );
   const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
 
   const userPaidAtLeastAYear = payment.amount_raw >= TURBO_YEARLY_PRICE;
@@ -93,7 +99,9 @@ function computeExpiration(
     const surplusSeconds = surplus / MONTHLY_PRICE_PER_SECOND;
     expirationDate.setSeconds(expirationDate.getSeconds() + surplusSeconds);
   } else {
-    console.log('error, unreachable code. Payment is not enough to extend the expiration');
+    console.log(
+      'error, unreachable code. Payment is not enough to extend the expiration'
+    );
   }
 
   return expirationDate;
@@ -103,7 +111,8 @@ export function createEvmWriters(indexerName: string) {
   const handlePaymentReceived: evm.Writer = async ({ block, txId, event }) => {
     if (!block || !event || !('args' in event)) return;
 
-    const { sender, token, amount, barcode } = event.args as PaymentReceivedArgs;
+    const { sender, token, amount, barcode } =
+      event.args as PaymentReceivedArgs;
     const tokenAddress = token.toLowerCase();
     const amountRaw = BigInt(amount);
     const amountDecimal = Number(amountRaw) / DECIMALS;
@@ -119,14 +128,16 @@ export function createEvmWriters(indexerName: string) {
 
     payment.barcode = barcode;
     const metadata = await getJSON(barcode);
-    metadata.params.space = MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
+    metadata.params.space =
+      MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
     console.log('Payment received for space', metadata.params.space);
 
     payment.block = Number(block.number);
     payment.timestamp = Number(block.timestamp);
     payment.type = metadata.type;
 
-    if (metadata.ref && typeof metadata.ref === 'string') payment.ref = metadata.ref;
+    if (metadata.ref && typeof metadata.ref === 'string')
+      payment.ref = metadata.ref;
 
     if (payment.type === 'turbo') payment.space = metadata.params.space;
 
@@ -139,7 +150,12 @@ export function createEvmWriters(indexerName: string) {
       space = new Space(metadata.params.space, indexerName);
     }
 
-    const expirationDate = computeExpiration(space, payment, metadata, Number(block.timestamp));
+    const expirationDate = computeExpiration(
+      space,
+      payment,
+      metadata,
+      Number(block.timestamp)
+    );
 
     space.turbo_expiration = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
     space.turbo_expiration_date = expirationDate.toDateString();

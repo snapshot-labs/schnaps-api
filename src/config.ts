@@ -14,7 +14,9 @@ const CONFIG = {
   }
 };
 
-export function createConfig(indexerName: keyof typeof CONFIG): CheckpointConfig {
+export function createConfig(
+  indexerName: keyof typeof CONFIG
+): CheckpointConfig {
   const { networkNodeUrl, contract, start } = CONFIG[indexerName];
 
   return {

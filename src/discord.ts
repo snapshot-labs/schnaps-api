@@ -1,8 +1,9 @@
-import { Payment, Space } from '../.checkpoint/models';
 import { CategorizedSpaces } from './queries';
+import { Payment, Space } from '../.checkpoint/models';
 
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
-const DISCORD_EXPIRATION_WEBHOOK_URL = process.env.DISCORD_EXPIRATION_WEBHOOK_URL;
+const DISCORD_EXPIRATION_WEBHOOK_URL =
+  process.env.DISCORD_EXPIRATION_WEBHOOK_URL;
 const INDEX_TESTNET = process.env.INDEX_TESTNET;
 
 const SNAPSHOT_BASE_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box`;
@@ -16,9 +17,9 @@ export async function notifyPayment(
   if (!DISCORD_WEBHOOK_URL) return;
 
   const now = ~~(Date.now() / 1e3);
-  const recentThreshold = now - 60 * 60; // 1 hour
+  const recentThreshold = now - 60 * 60; // 1 hours
 
-  if (block.timestamp < recentThreshold) return;
+  if (Number(block.timestamp) < recentThreshold) return;
 
   const explorerBaseUrl = `https://${INDEX_TESTNET ? 'sepolia.' : ''}etherscan.io`;
 
@@ -52,7 +53,7 @@ export async function notifyPayment(
               inline: true
             }
           ],
-          timestamp: new Date(block.timestamp * 1000).toISOString()
+          timestamp: new Date(Number(block.timestamp) * 1000).toISOString()
         }
       ]
     })
@@ -95,7 +96,10 @@ export async function sendExpirationNotification(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: sections.join('\n') })
     });
-    if (!response.ok) throw new Error(`Discord webhook responded with status ${response.status}`);
+    if (!response.ok)
+      throw new Error(
+        `Discord webhook responded with status ${response.status}`
+      );
     console.log(
       `Sent notification for ${expired.length + expiring.length} spaces (${
         expired.length

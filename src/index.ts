@@ -1,14 +1,14 @@
 import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
 import Checkpoint, { evm, LogLevel } from '@snapshot-labs/checkpoint';
+import cors from 'cors';
+import express from 'express';
 import { createConfig } from './config';
-import { createEvmWriters } from './writers';
-import overrides from './overrides.json';
 import { startExpirationMonitor } from './expirationMonitor';
+import overrides from './overrides.json';
 import { sleep } from './utils';
+import { createEvmWriters } from './writers';
 
 const PRODUCTION_INDEXER_DELAY = 60 * 1000;
 const dir = __dirname.endsWith('dist/src') ? '../' : '';
@@ -33,7 +33,9 @@ checkpoint.addIndexer(network, config, indexer);
 
 async function run() {
   if (process.env.NODE_ENV === 'production') {
-    console.log('Delaying indexer to prevent multiple processes indexing at the same time.');
+    console.log(
+      'Delaying indexer to prevent multiple processes indexing at the same time.'
+    );
     await sleep(PRODUCTION_INDEXER_DELAY);
   }
 
