@@ -17,9 +17,11 @@ export async function notifyPayment(
   if (!DISCORD_WEBHOOK_URL) return;
 
   const now = ~~(Date.now() / 1e3);
-  const recentThreshold = now - 60 * 60; // 1 hours
+  const recentThreshold = now - 60 * 60; // 1 hour
 
-  if (Number(block.timestamp) < recentThreshold) return;
+  const blockTimestamp = Number(block.timestamp);
+
+  if (blockTimestamp < recentThreshold) return;
 
   const explorerBaseUrl = `https://${INDEX_TESTNET ? 'sepolia.' : ''}etherscan.io`;
 
@@ -53,7 +55,7 @@ export async function notifyPayment(
               inline: true
             }
           ],
-          timestamp: new Date(Number(block.timestamp) * 1000).toISOString()
+          timestamp: new Date(blockTimestamp * 1000).toISOString()
         }
       ]
     })
