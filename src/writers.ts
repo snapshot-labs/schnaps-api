@@ -1,15 +1,9 @@
 import { evm } from '@snapshot-labs/checkpoint';
+import { SchnappsAbi } from './abis/Schnaps';
 import { notifyPayment } from './discord';
 import tokens from './payment_tokens.json';
 import { getJSON } from './utils';
 import { Payment, Space } from '../.checkpoint/models';
-
-type PaymentReceivedArgs = {
-  sender: string;
-  token: string;
-  amount: bigint;
-  barcode: string;
-};
 
 const MILLISECONDS = 1000;
 const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
@@ -108,11 +102,13 @@ function computeExpiration(
 }
 
 export function createEvmWriters(indexerName: string) {
-  const handlePaymentReceived: evm.Writer = async ({ block, txId, event }) => {
-    if (!block || !event || !('args' in event)) return;
+  const handlePaymentReceived: evm.Writer<
+    typeof SchnappsAbi,
+    'PaymentReceived'
+  > = async ({ block, txId, event }) => {
+    if (!block || !event) return;
 
-    const { sender, token, amount, barcode } =
-      event.args as PaymentReceivedArgs;
+    const { sender, token, amount, barcode } = event.args;
     const tokenAddress = token.toLowerCase();
     const amountRaw = BigInt(amount);
     const amountDecimal = Number(amountRaw) / DECIMALS;

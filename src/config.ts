@@ -1,5 +1,5 @@
 import { CheckpointConfig } from '@snapshot-labs/checkpoint';
-import Schnaps from './abis/Schnaps.json';
+import { SchnappsAbi as Schnaps } from './abis/Schnaps';
 
 const CONFIG = {
   sep: {
