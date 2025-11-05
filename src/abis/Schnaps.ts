@@ -1,4 +1,4 @@
-export const SchnappsAbi = [
+const SchnappsAbi = [
   {
     type: 'constructor',
     inputs: [
@@ -169,3 +169,5 @@ export const SchnappsAbi = [
     inputs: [{ name: 'token', type: 'address', internalType: 'address' }]
   }
 ] as const;
+
+export default SchnappsAbi;

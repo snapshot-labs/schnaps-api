@@ -1,5 +1,5 @@
 import { evm } from '@snapshot-labs/checkpoint';
-import { SchnappsAbi } from './abis/Schnaps';
+import SchnappsAbi from './abis/Schnaps';
 import { notifyPayment } from './discord';
 import tokens from './payment_tokens.json';
 import { getJSON } from './utils';
