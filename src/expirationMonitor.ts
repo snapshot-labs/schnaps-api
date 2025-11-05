@@ -19,7 +19,7 @@ export async function startExpirationMonitor(
     return;
   }
 
-  const knex = checkpoint.getBaseContext().knex;
+  const { knex }  = checkpoint.getBaseContext();
   const client = createPublicClient({
     transport: http(config.network_node_url)
   });
