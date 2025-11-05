@@ -1,5 +1,5 @@
 import { evm } from '@snapshot-labs/checkpoint';
-import SchnappsAbi from './abis/Schnaps';
+import SchnapsAbi from './abis/Schnaps';
 import { notifyPayment } from './discord';
 import tokens from './payment_tokens.json';
 import { getJSON } from './utils';
@@ -103,7 +103,7 @@ function computeExpiration(
 
 export function createEvmWriters(indexerName: string) {
   const handlePaymentReceived: evm.Writer<
-    typeof SchnappsAbi,
+    typeof SchnapsAbi,
     'PaymentReceived'
   > = async ({ block, txId, event }) => {
     if (!block || !event) return;

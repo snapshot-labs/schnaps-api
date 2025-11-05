@@ -4,8 +4,8 @@ import { sendExpirationNotification } from './discord';
 import { getExpiringSpaces, getLatestIndexedBlock } from './queries';
 import { sleep } from './utils';
 
-const IN_SYNC_CHECK_INTERVAL_MS = 24 * 36e5; // 1 day
-const OUT_OF_SYNC_CHECK_INTERVAL_MS = 10 * 6e4; // 10 minutes
+const IN_SYNC_CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
+const OUT_OF_SYNC_CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 const SYNC_THRESHOLD_BLOCKS = 200; // Number of blocks to consider indexer in sync
 
 export async function startExpirationMonitor(
