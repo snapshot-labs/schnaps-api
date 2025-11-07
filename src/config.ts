@@ -10,7 +10,7 @@ const CONFIG = {
   eth: {
     networkNodeUrl: 'https://rpc.brovider.xyz/1',
     contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
-    start: 23185322
+    start: 21966192
   }
 };
 
