@@ -79,7 +79,7 @@ export async function sendExpirationNotification(
       sections.push(
         ...expired.map(
           space =>
-            `❌ **[${space.id}](${SNAPSHOT_BASE_URL}/#/s:${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`
+            `❌ **[${space.id}](${SNAPSHOT_BASE_URL}/#/${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`
         )
       );
     }
@@ -89,7 +89,7 @@ export async function sendExpirationNotification(
       sections.push(
         ...expiring.map(
           space =>
-            `⚠️ **[${space.id}](${SNAPSHOT_BASE_URL}/#/s:${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`
+            `⚠️ **[${space.id}](${SNAPSHOT_BASE_URL}/#/${space.id}/settings/billing)** — <t:${space.expiration}:R> (<t:${space.expiration}:f>)`
         )
       );
     }
