@@ -1,5 +1,5 @@
 import { CheckpointConfig } from '@snapshot-labs/checkpoint';
-import Schnaps from './abis/Schnaps.json';
+import Schnaps from './abis/Schnaps';
 
 const CONFIG = {
   sep: {
@@ -10,11 +10,13 @@ const CONFIG = {
   eth: {
     networkNodeUrl: 'https://rpc.brovider.xyz/1',
     contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
-    start: 21966192
+    start: 23185322
   }
 };
 
-export function createConfig(indexerName: keyof typeof CONFIG): CheckpointConfig {
+export function createConfig(
+  indexerName: keyof typeof CONFIG
+): CheckpointConfig {
   const { networkNodeUrl, contract, start } = CONFIG[indexerName];
 
   return {

@@ -9,8 +9,10 @@ export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   )
     return `${ipfsGateway}/ipfs/${uri}`;
   const uriScheme = uri.split('://')[0];
-  if (uriScheme === 'ipfs') return uri.replace('ipfs://', `${ipfsGateway}/ipfs/`);
-  if (uriScheme === 'ipns') return uri.replace('ipns://', `${ipfsGateway}/ipns/`);
+  if (uriScheme === 'ipfs')
+    return uri.replace('ipfs://', `${ipfsGateway}/ipfs/`);
+  if (uriScheme === 'ipns')
+    return uri.replace('ipns://', `${ipfsGateway}/ipns/`);
   return uri;
 }
 
@@ -20,3 +22,6 @@ export async function getJSON(uri: string) {
 
   return fetch(url).then(res => res.json());
 }
+
+export const sleep = (ms: number) =>
+  new Promise(resolve => setTimeout(resolve, ms));
