@@ -18,7 +18,7 @@ export async function notifyPayment(
   if (!DISCORD_WEBHOOK_URL) return;
 
   const now = ~~(Date.now() / 1e3);
-  const recentThreshold = now - 48 * 60 * 60; // 48 hours
+  const recentThreshold = now - 60 * 60; // 1 hour
 
   const blockTimestamp = Number(block.timestamp);
 
