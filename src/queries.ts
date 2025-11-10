@@ -16,10 +16,11 @@ export async function getExpiringSpaces(
   try {
     const now = ~~(Date.now() / 1e3);
     const sevenDays = 7 * 24 * 60 * 60;
+    const thirtyDays = 30 * 24 * 60 * 60;
 
     const spaces = await knex('spaces')
       .select('id', 'turbo_expiration')
-      .whereBetween('turbo_expiration', [now - sevenDays, now + sevenDays])
+      .whereBetween('turbo_expiration', [now - thirtyDays, now + sevenDays])
       .distinctOn('id')
       .orderByRaw('id, upper_inf(block_range) DESC, upper(block_range) DESC');
 

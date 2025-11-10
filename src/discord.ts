@@ -75,7 +75,7 @@ export async function sendExpirationNotification(
     const sections: string[] = ['💸 **Snapshot Pro expirations**'];
 
     if (expired.length > 0) {
-      sections.push('\n**💀 Expired (within last 7 days)**');
+      sections.push('\n**💀 Expired (within last 30 days)**');
       sections.push(
         ...expired.map(
           space =>
