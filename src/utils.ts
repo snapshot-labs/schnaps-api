@@ -1,4 +1,4 @@
-import { backOff } from "exponential-backoff";
+import { backOff } from 'exponential-backoff';
 
 export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   const ipfsGateway = `https://${gateway}`;
