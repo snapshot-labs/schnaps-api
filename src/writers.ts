@@ -124,6 +124,8 @@ export function createEvmWriters(indexerName: string) {
 
     payment.barcode = barcode;
     const metadata = await getJSON(barcode);
+    if (!metadata?.params?.space) return;
+
     metadata.params.space =
       MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
     console.log('Payment received for space', metadata.params.space);

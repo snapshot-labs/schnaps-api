@@ -16,11 +16,36 @@ export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   return uri;
 }
 
-export async function getJSON(uri: string) {
+export async function getJSON(uri: string, retries = 3) {
   const url = getUrl(uri);
-  if (!url) throw new Error('Invalid URI');
+  if (!url) {
+    console.error(`Invalid URI: ${uri}`);
+    return null;
+  }
 
-  return fetch(url).then(res => res.json());
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return await res.json();
+    } catch (error) {
+      lastError = error as Error;
+
+      if (lastError.message.includes('is not valid JSON')) {
+        console.error(`Invalid JSON from ${uri}:`, lastError);
+        return null;
+      }
+
+      if (attempt < retries) await sleep(2000);
+    }
+  }
+
+  console.error(`Failed to fetch or parse JSON from ${uri}:`, lastError);
+  return null;
 }
 
 export const sleep = (ms: number) =>
