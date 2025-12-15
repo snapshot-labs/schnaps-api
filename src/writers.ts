@@ -127,7 +127,7 @@ export function createEvmWriters(indexerName: string) {
     try {
       metadata = await getJSON(barcode);
     } catch (e) {
-      console.log('Failed to fetch metadata for barcode:', e);
+      console.error('Failed to fetch metadata for barcode:', e);
       return;
     }
     if (!metadata?.params?.space) return;
