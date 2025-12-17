@@ -1,3 +1,5 @@
+import { backOff } from 'exponential-backoff';
+
 export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   const ipfsGateway = `https://${gateway}`;
   if (!uri) return null;
@@ -18,9 +20,26 @@ export function getUrl(uri: string, gateway = 'pineapple.fyi') {
 
 export async function getJSON(uri: string) {
   const url = getUrl(uri);
-  if (!url) throw new Error('Invalid URI');
+  if (!url) {
+    throw new Error(`Invalid URI: ${uri}`);
+  }
 
-  return fetch(url).then(res => res.json());
+  return backOff(
+    async () => {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(15000)
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      return res.json();
+    },
+    {
+      numOfAttempts: 3
+    }
+  );
 }
 
 export const sleep = (ms: number) =>

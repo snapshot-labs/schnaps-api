@@ -123,7 +123,15 @@ export function createEvmWriters(indexerName: string) {
     payment.amount_decimal = amountDecimal.toString();
 
     payment.barcode = barcode;
-    const metadata = await getJSON(barcode);
+    let metadata;
+    try {
+      metadata = await getJSON(barcode);
+    } catch (err) {
+      console.error('Failed to fetch metadata for barcode:', err);
+      return;
+    }
+    if (!metadata?.params?.space) return;
+
     metadata.params.space =
       MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
     console.log('Payment received for space', metadata.params.space);
