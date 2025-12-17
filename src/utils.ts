@@ -24,7 +24,7 @@ export async function getJSON(uri: string) {
     throw new Error(`Invalid URI: ${uri}`);
   }
 
-  return await backOff(
+  return backOff(
     async () => {
       const res = await fetch(url, {
         signal: AbortSignal.timeout(15000)
