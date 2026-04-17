@@ -109,7 +109,7 @@ export function createEvmWriters(indexerName: string) {
     if (!block || !event) return;
 
     // Prevent indexing test batch txs
-    if ([24898810, 24899177].includes(Number(block.number))) return;
+    if ([24898810, 24899177, 24899186].includes(Number(block.number))) return;
 
     const { sender, token, amount, barcode } = event.args;
     const tokenAddress = token.toLowerCase();
