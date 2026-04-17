@@ -108,6 +108,9 @@ export function createEvmWriters(indexerName: string) {
   > = async ({ block, txId, event }) => {
     if (!block || !event) return;
 
+    // Prevent indexing test batch txs
+    if (Number(block.number) === 24898810) return;
+
     const { sender, token, amount, barcode } = event.args;
     const tokenAddress = token.toLowerCase();
     const amountRaw = BigInt(amount);
