@@ -16,9 +16,17 @@ const CONFIG = {
 
 export const NETWORK = process.env.INDEX_TESTNET ? 'sep' : 'eth';
 
-export const TURBO_PRICE_USD = {
+export const PLANS = ['monthly', 'yearly'] as const;
+export type Plan = (typeof PLANS)[number];
+
+export const TURBO_PRICE_USD: Record<Plan, number> = {
   monthly: 600,
   yearly: 6000
+};
+
+export const TURBO_PRICE_CENTS: Record<Plan, number> = {
+  monthly: TURBO_PRICE_USD.monthly * 100,
+  yearly: TURBO_PRICE_USD.yearly * 100
 };
 
 export function createConfig(

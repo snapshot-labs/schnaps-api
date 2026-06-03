@@ -71,6 +71,56 @@ export async function notifyPayment(
   });
 }
 
+export async function notifyStripePayment(
+  payment: Payment,
+  space: Space,
+  livemode: boolean
+): Promise<void> {
+  if (!isRecent(payment.timestamp)) return;
+
+  // payment.id is `stripe:<invoice_id>`; the dashboard resolves the invoice id
+  // directly under /invoices/. Test vs live comes from the invoice's livemode.
+  const invoiceId = payment.id.replace(/^stripe:/, '');
+  const dashboardUrl = `https://dashboard.stripe.com${livemode ? '' : '/test'}/invoices/${invoiceId}`;
+
+  await postToDiscord({
+    embeds: [
+      {
+        title: `💳 New payment of ${payment.amount_decimal} ${payment.token_symbol}`,
+        url: dashboardUrl,
+        fields: [
+          {
+            name: 'Space',
+            value: `[${payment.space}](${SNAPSHOT_BASE_URL}/#/${payment.space})`,
+            inline: true
+          },
+          {
+            name: 'Source',
+            value: 'Stripe',
+            inline: true
+          },
+          {
+            name: 'Expiration',
+            value: `<t:${space.turbo_expiration}:R>`,
+            inline: true
+          }
+        ],
+        timestamp: new Date(payment.timestamp * 1000).toISOString()
+      }
+    ]
+  });
+}
+
+export async function notifyStripeCancellation(
+  space: string,
+  reason?: string | null
+): Promise<void> {
+  const detail = reason ? ` (${reason})` : '';
+  await postToDiscord({
+    content: `🚫 Stripe subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail}.`
+  });
+}
+
 export async function sendExpirationNotification(
   categorizedSpaces: CategorizedSpaces
 ): Promise<void> {
