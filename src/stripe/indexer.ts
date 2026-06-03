@@ -98,18 +98,17 @@ async function indexPaidInvoices(since: number): Promise<void> {
 async function notifyCanceledSubscriptions(since: number): Promise<void> {
   if (!stripe) return;
 
-  const recentThreshold = nowSeconds() - 60 * 60; // 1h; the cursor replays from 0
   for await (const event of stripe.events.list({
     type: 'customer.subscription.deleted',
     created: { gte: since },
     limit: 100
   })) {
-    if (event.created < recentThreshold) continue;
     const subscription = event.data.object as CanceledSubscription;
     const space = subscription.metadata?.space;
     if (space) {
       await notifyStripeCancellation(
         space,
+        event.created,
         subscription.cancellation_details?.reason
       );
     }

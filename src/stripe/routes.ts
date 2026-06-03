@@ -1,12 +1,13 @@
 import express, { Router } from 'express';
-import { PLANS } from '../config';
+import { PLANS, TURBO_PRICE_CENTS } from '../config';
 import { sendError } from '../utils';
-import { createTurboCheckoutSession } from './checkout';
 import { stripe } from './client';
 
 const router = Router();
 
 router.post('/create', express.json(), async (req, res) => {
+  if (!stripe) return sendError(res, 'stripe not configured');
+
   const { space, plan, success_url, cancel_url } = req.body ?? {};
 
   if (!space) {
@@ -18,11 +19,22 @@ router.post('/create', express.json(), async (req, res) => {
   }
 
   try {
-    const session = await createTurboCheckoutSession({
-      space,
-      plan,
-      successUrl: success_url,
-      cancelUrl: cancel_url
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: { name: `Snapshot Pro (${space})` },
+            unit_amount: TURBO_PRICE_CENTS[plan],
+            recurring: { interval: plan === 'yearly' ? 'year' : 'month' }
+          },
+          quantity: 1
+        }
+      ],
+      subscription_data: { metadata: { space } },
+      success_url,
+      cancel_url
     });
     return res.json({ result: { url: session.url } });
   } catch (err) {
