@@ -7,6 +7,8 @@ import express from 'express';
 import { createConfig, NETWORK } from './config';
 import { startExpirationMonitor } from './expirationMonitor';
 import overrides from './overrides.json';
+import { startStripeIndexer } from './stripe/indexer';
+import stripeRouter from './stripe/routes';
 import { sleep } from './utils';
 import { createEvmWriters } from './writers';
 
@@ -41,15 +43,17 @@ async function run() {
   await checkpoint.resetMetadata();
   await checkpoint.reset();
   checkpoint.start();
+  startStripeIndexer();
   startExpirationMonitor(checkpoint, config);
 }
 
 run();
 
 const app = express();
+app.use(cors({ maxAge: 86400 }));
+app.use('/stripe', stripeRouter);
 app.use(express.json({ limit: '4mb' }));
 app.use(express.urlencoded({ limit: '4mb', extended: false }));
-app.use(cors({ maxAge: 86400 }));
 app.use('/', checkpoint.graphql);
 
 const PORT = process.env.PORT || 3000;
