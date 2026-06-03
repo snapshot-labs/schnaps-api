@@ -97,11 +97,15 @@ async function indexPaidInvoices(since: number): Promise<void> {
 async function notifyCanceledSubscriptions(since: number): Promise<void> {
   if (!stripe) return;
 
-  for await (const event of stripe.events.list({
-    type: 'customer.subscription.deleted',
-    created: { gte: since },
-    limit: 100
-  })) {
+  const events = await Array.fromAsync(
+    stripe.events.list({
+      type: 'customer.subscription.deleted',
+      created: { gte: since },
+      limit: 100
+    })
+  );
+
+  for (const event of events) {
     const subscription = event.data.object as CanceledSubscription;
     const space = subscription.metadata?.space;
     if (space) {
