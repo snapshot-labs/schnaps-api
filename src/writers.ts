@@ -1,5 +1,6 @@
 import { evm } from '@snapshot-labs/checkpoint';
 import SchnapsAbi from './abis/Schnaps';
+import { TURBO_PRICE_USD } from './config';
 import { notifyPayment } from './discord';
 import tokens from './payment_tokens.json';
 import { getJSON } from './utils';
@@ -8,8 +9,8 @@ import { Payment, Space } from '../.checkpoint/models';
 const MILLISECONDS = 1000;
 const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
 
-const TURBO_MONTHLY_PRICE = 600 * DECIMALS;
-const TURBO_YEARLY_PRICE = 6000 * DECIMALS;
+const TURBO_MONTHLY_PRICE = TURBO_PRICE_USD.monthly * DECIMALS;
+const TURBO_YEARLY_PRICE = TURBO_PRICE_USD.yearly * DECIMALS;
 
 const DAYS_PER_YEAR = (365 * 3 + 366) / 4; // Accounting for leap years, which happens even four year (this is technically incorrect due to leap seconds but it's good enough for this purpose)
 const YEARLY_PRICE_PER_DAY = TURBO_YEARLY_PRICE / DAYS_PER_YEAR;
@@ -33,13 +34,48 @@ function getTokenSymbol(tokenAddress: string, chain: string) {
   return tokens[chain][tokenAddress];
 }
 
-// Computes the time of expiration of a space based on the payment received.
-// The logic is as follows:
-// - Returns `null` if the payment is not enough to extend the by at least one month
-// - If the user has paid for more than a year, the expiration date is extended by the number of years paid
-//   - Then take the surplus and increase the expiration date based on the YEARLY_PRICE_PER_SECOND
-// - If the user has paid for more than a month (but less than a year), the expiration date is extended by the number of months paid
-//   - Then take the surplus and increase the expiration date based on the MONTHLY_PRICE_PER_SECOND
+// Computes the new expiration date from a payment amount.
+// Pure helper, no entity coupling — both the on-chain writer and the Stripe
+// indexer call this with primitives.
+// - Returns the current expiration unchanged if the amount is below one month
+// - If the user has paid for more than a year, extends by the number of years paid
+//   plus a per-second surplus at YEARLY_PRICE_PER_SECOND
+// - Otherwise extends by the number of months paid plus a per-second surplus
+//   at MONTHLY_PRICE_PER_SECOND
+export function computeExpirationFromAmount(
+  amountRaw: bigint,
+  currentExpiration: number,
+  timestamp: number
+): Date {
+  if (amountRaw < TURBO_MONTHLY_PRICE) {
+    if (currentExpiration) {
+      return new Date(currentExpiration * MILLISECONDS);
+    }
+    return new Date(0);
+  }
+
+  const baseTimestamp = Math.max(currentExpiration, timestamp);
+  const expirationDate = new Date(baseTimestamp * MILLISECONDS);
+
+  if (amountRaw >= TURBO_YEARLY_PRICE) {
+    const years = Number(amountRaw) / TURBO_YEARLY_PRICE;
+    expirationDate.setFullYear(expirationDate.getFullYear() + years);
+
+    const surplus = Number(amountRaw) % TURBO_YEARLY_PRICE;
+    const surplusSeconds = surplus / YEARLY_PRICE_PER_SECOND;
+    expirationDate.setSeconds(expirationDate.getSeconds() + surplusSeconds);
+  } else {
+    const months = Number(amountRaw) / TURBO_MONTHLY_PRICE;
+    expirationDate.setMonth(expirationDate.getMonth() + months);
+
+    const surplus = Number(amountRaw) % TURBO_MONTHLY_PRICE;
+    const surplusSeconds = surplus / MONTHLY_PRICE_PER_SECOND;
+    expirationDate.setSeconds(expirationDate.getSeconds() + surplusSeconds);
+  }
+
+  return expirationDate;
+}
+
 function computeExpiration(
   space: Space,
   payment: Payment,
@@ -52,53 +88,14 @@ function computeExpiration(
     payment.amount_raw == 0n
   ) {
     const date = new Date(metadata.params.expiration * MILLISECONDS);
-    if (isNaN(date.getTime())) {
-      return new Date(0);
-    } else {
-      return date;
-    }
+    return isNaN(date.getTime()) ? new Date(0) : date;
   }
 
-  if (payment.amount_raw < TURBO_MONTHLY_PRICE) {
-    // Return early because the payment is not enough to extend the expiration
-    if (space.turbo_expiration) {
-      // User already had an expiration date, leave it untouched.
-      return new Date(space.turbo_expiration * MILLISECONDS);
-    } else {
-      // User didn't have an expiration date, leave it to 0
-      return new Date(0);
-    }
-  }
-
-  // If the space already has an expiration date, use it as the current expiration date
-  const currentExpirationTimestamp = Math.max(
+  return computeExpirationFromAmount(
+    payment.amount_raw,
     space.turbo_expiration,
     blockTimestamp
   );
-  const expirationDate = new Date(currentExpirationTimestamp * MILLISECONDS); // Multiply by 1000 to convert to milliseconds
-
-  const userPaidAtLeastAYear = payment.amount_raw >= TURBO_YEARLY_PRICE;
-  if (userPaidAtLeastAYear) {
-    const years = Number(payment.amount_raw) / TURBO_YEARLY_PRICE;
-    expirationDate.setFullYear(expirationDate.getFullYear() + years);
-
-    const surplus = Number(payment.amount_raw) % TURBO_YEARLY_PRICE;
-    const surplusSeconds = surplus / YEARLY_PRICE_PER_SECOND;
-    expirationDate.setSeconds(expirationDate.getSeconds() + surplusSeconds);
-  } else if (payment.amount_raw >= TURBO_MONTHLY_PRICE) {
-    const months = Number(payment.amount_raw) / TURBO_MONTHLY_PRICE;
-    expirationDate.setMonth(expirationDate.getMonth() + months);
-
-    const surplus = Number(payment.amount_raw) % TURBO_MONTHLY_PRICE;
-    const surplusSeconds = surplus / MONTHLY_PRICE_PER_SECOND;
-    expirationDate.setSeconds(expirationDate.getSeconds() + surplusSeconds);
-  } else {
-    console.log(
-      'error, unreachable code. Payment is not enough to extend the expiration'
-    );
-  }
-
-  return expirationDate;
 }
 
 export function createEvmWriters(indexerName: string) {
