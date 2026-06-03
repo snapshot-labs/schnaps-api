@@ -14,6 +14,13 @@ const CONFIG = {
   }
 };
 
+export const NETWORK = process.env.INDEX_TESTNET ? 'sep' : 'eth';
+
+export const TURBO_PRICE_USD = {
+  monthly: 600,
+  yearly: 6000
+};
+
 export function createConfig(
   indexerName: keyof typeof CONFIG
 ): CheckpointConfig {

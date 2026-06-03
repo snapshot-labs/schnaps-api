@@ -4,7 +4,7 @@ import path from 'path';
 import Checkpoint, { evm, LogLevel } from '@snapshot-labs/checkpoint';
 import cors from 'cors';
 import express from 'express';
-import { createConfig } from './config';
+import { createConfig, NETWORK } from './config';
 import { startExpirationMonitor } from './expirationMonitor';
 import overrides from './overrides.json';
 import { sleep } from './utils';
@@ -19,8 +19,7 @@ if (process.env.CA_CERT) {
   process.env.CA_CERT = process.env.CA_CERT.replace(/\\n/g, '\n');
 }
 
-const network = process.env.INDEX_TESTNET ? 'sep' : 'eth';
-const config = createConfig(network);
+const config = createConfig(NETWORK);
 
 const checkpoint = new Checkpoint(schema, {
   logLevel: LogLevel.Info,
@@ -28,8 +27,8 @@ const checkpoint = new Checkpoint(schema, {
   overridesConfig: overrides
 });
 
-const indexer = new evm.EvmIndexer(createEvmWriters(network));
-checkpoint.addIndexer(network, config, indexer);
+const indexer = new evm.EvmIndexer(createEvmWriters(NETWORK));
+checkpoint.addIndexer(NETWORK, config, indexer);
 
 async function run() {
   if (process.env.NODE_ENV === 'production') {
