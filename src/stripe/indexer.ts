@@ -6,7 +6,7 @@ import { computeExpirationFromAmount } from '../writers';
 import { stripe } from './client';
 
 const POLL_INTERVAL = 15_000; // 15 seconds
-const CENTS_TO_RAW = 10000n; // cents (2 dp) -> token raw amount (6 dp)
+const CENTS_TO_RAW = 10000n; // USD cents → 6-decimal token raw (10^6 / 10^2)
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -75,14 +75,13 @@ export async function indexInvoice(invoice: StripeInvoice): Promise<void> {
 async function indexPaidInvoices(since: number): Promise<void> {
   if (!stripe) return;
 
-  const invoices: any[] = [];
-  for await (const invoice of stripe.invoices.list({
-    status: 'paid',
-    created: { gte: since },
-    limit: 100
-  })) {
-    invoices.push(invoice);
-  }
+  const invoices = await Array.fromAsync(
+    stripe.invoices.list({
+      status: 'paid',
+      created: { gte: since },
+      limit: 100
+    })
+  );
   // Oldest first: expiration accumulates in the order payments were made.
   invoices.sort((a, b) => a.created - b.created);
 
