@@ -124,6 +124,18 @@ export async function notifyStripeCancellation(
   });
 }
 
+export async function notifyStripeRefund(
+  space: string,
+  timestamp: number,
+  amount: string
+): Promise<void> {
+  if (!isRecent(timestamp)) return;
+
+  await postToDiscord({
+    content: `↩️ Stripe payment refunded ($${amount}) for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing) — turbo reduced.`
+  });
+}
+
 export async function sendExpirationNotification(
   categorizedSpaces: CategorizedSpaces
 ): Promise<void> {

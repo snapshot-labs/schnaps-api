@@ -1,6 +1,10 @@
 import { Payment, Space } from '../../.checkpoint/models';
 import { NETWORK } from '../config';
-import { notifyStripeCancellation, notifyStripePayment } from '../discord';
+import {
+  notifyStripeCancellation,
+  notifyStripePayment,
+  notifyStripeRefund
+} from '../discord';
 import { sleep } from '../utils';
 import { computeExpirationFromAmount } from '../writers';
 import { stripe } from './client';
@@ -25,6 +29,10 @@ type StripeInvoice = {
 type CanceledSubscription = {
   metadata: Record<string, string> | null;
   cancellation_details: { reason: string | null } | null;
+};
+
+type RefundedCharge = {
+  payment_intent: string | null;
 };
 
 export async function indexInvoice(invoice: StripeInvoice): Promise<void> {
@@ -94,26 +102,72 @@ async function indexPaidInvoices(since: number): Promise<void> {
   }
 }
 
-async function notifyCanceledSubscriptions(since: number): Promise<void> {
+async function refundPayment(
+  charge: RefundedCharge,
+  timestamp: number
+): Promise<void> {
+  if (!stripe || !charge.payment_intent) return;
+
+  const [invoicePayment] = await Array.fromAsync(
+    stripe.invoicePayments.list({
+      payment: { type: 'payment_intent', payment_intent: charge.payment_intent }
+    })
+  );
+
+  const invoice = invoicePayment?.invoice;
+  const invoiceId = typeof invoice === 'string' ? invoice : invoice?.id;
+  if (!invoiceId) return;
+
+  const payment = await Payment.loadEntity(`stripe:${invoiceId}`, NETWORK);
+  if (!payment) return;
+
+  const space = payment.space;
+  console.log('[stripe] refund for space', space);
+  await payment.delete();
+
+  const spaceEntity = await Space.loadEntity(space, NETWORK);
+  if (spaceEntity) {
+    const reductionSeconds =
+      computeExpirationFromAmount(payment.amount_raw, 0, 0).getTime() / 1000;
+    const expiration = spaceEntity.turbo_expiration - reductionSeconds;
+    spaceEntity.turbo_expiration = expiration;
+    spaceEntity.turbo_expiration_date = new Date(
+      expiration * 1000
+    ).toDateString();
+    await spaceEntity.save();
+  }
+
+  notifyStripeRefund(space, timestamp, payment.amount_decimal);
+}
+
+async function handleStripeEvents(since: number): Promise<void> {
   if (!stripe) return;
 
   const events = await Array.fromAsync(
     stripe.events.list({
-      type: 'customer.subscription.deleted',
+      types: ['charge.refunded', 'customer.subscription.deleted'],
       created: { gte: since },
       limit: 100
     })
   );
 
   for (const event of events) {
-    const subscription = event.data.object as CanceledSubscription;
-    const space = subscription.metadata?.space;
-    if (space) {
-      await notifyStripeCancellation(
-        space,
-        event.created,
-        subscription.cancellation_details?.reason
-      );
+    try {
+      if (event.type === 'charge.refunded') {
+        await refundPayment(event.data.object as RefundedCharge, event.created);
+      } else {
+        const subscription = event.data.object as CanceledSubscription;
+        const space = subscription.metadata?.space;
+        if (space) {
+          await notifyStripeCancellation(
+            space,
+            event.created,
+            subscription.cancellation_details?.reason
+          );
+        }
+      }
+    } catch (err) {
+      console.error('[stripe] indexer: failed to handle', event.type, err);
     }
   }
 }
@@ -127,7 +181,7 @@ export async function startStripeIndexer(): Promise<void> {
     const polledAt = nowSeconds();
     try {
       await indexPaidInvoices(cursor);
-      await notifyCanceledSubscriptions(cursor);
+      await handleStripeEvents(cursor);
       cursor = polledAt;
     } catch (err) {
       console.error('[stripe] indexer: poll failed', err);
