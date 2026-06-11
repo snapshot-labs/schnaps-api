@@ -10,7 +10,7 @@ export const stripeConfig: CheckpointConfig = {
   sources: [
     {
       contract: 'stripe',
-      start: Math.floor(STRIPE_START_TS / WINDOW),
+      start: ~~(STRIPE_START_TS / WINDOW),
       events: []
     }
   ]

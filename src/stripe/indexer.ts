@@ -70,7 +70,7 @@ class StripeProvider extends BaseProvider {
   }
 
   async getLatestBlockNumber(): Promise<number> {
-    return Math.floor(Date.now() / 1000 / WINDOW);
+    return ~~(Date.now() / 1000 / WINDOW);
   }
 
   async getBlockHash(blockNumber: number): Promise<string> {
@@ -88,6 +88,11 @@ class StripeProvider extends BaseProvider {
     this.windowsCache.delete(blockNumber);
 
     await processWindow(data);
+    await this.instance.setBlockHash(
+      blockNumber,
+      await this.getBlockHash(blockNumber)
+    );
+    await this.instance.setLastIndexedBlock(blockNumber);
 
     return blockNumber + 1;
   }
@@ -103,7 +108,7 @@ class StripeProvider extends BaseProvider {
 
     const windows = new Set<number>();
     const bucketFor = (created: number): WindowData => {
-      const block = Math.floor(created / WINDOW);
+      const block = ~~(created / WINDOW);
       windows.add(block);
       let bucket = this.windowsCache.get(block);
       if (!bucket) {

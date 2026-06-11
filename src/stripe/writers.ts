@@ -15,6 +15,7 @@ export type StripeCharge = {
 
 export type StripeRefund = {
   id: string;
+  amount: number;
   created: number;
   status: string | null;
   payment_intent: string | { id: string } | null;
@@ -99,13 +100,17 @@ export async function refundPayment(refund: StripeRefund): Promise<void> {
   if (!payment) return;
 
   const space = payment.space;
+  const refundAmountRaw = BigInt(refund.amount) * CENTS_TO_RAW;
+  const refundAmountDecimal = (refund.amount / 100).toString();
   console.log('[stripe] refund for space', space);
-  await payment.delete();
+  if (refundAmountRaw >= payment.amount_raw) {
+    await payment.delete();
+  }
 
   const spaceEntity = await Space.loadEntity(space, NETWORK);
   if (spaceEntity) {
     const reductionSeconds =
-      computeExpirationFromAmount(payment.amount_raw, 0, 0).getTime() / 1000;
+      computeExpirationFromAmount(refundAmountRaw, 0, 0).getTime() / 1000;
     const expiration = spaceEntity.turbo_expiration - reductionSeconds;
     spaceEntity.turbo_expiration = expiration;
     spaceEntity.turbo_expiration_date = new Date(
@@ -114,5 +119,5 @@ export async function refundPayment(refund: StripeRefund): Promise<void> {
     await spaceEntity.save();
   }
 
-  notifyStripeRefund(space, refund.created, payment.amount_decimal);
+  notifyStripeRefund(space, refund.created, refundAmountDecimal);
 }
