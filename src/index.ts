@@ -7,7 +7,9 @@ import express from 'express';
 import { createConfig, NETWORK } from './config';
 import { startExpirationMonitor } from './expirationMonitor';
 import overrides from './overrides.json';
-import { startStripeIndexer } from './stripe/indexer';
+import { stripe } from './stripe/client';
+import { stripeConfig } from './stripe/config';
+import { StripeIndexer } from './stripe/indexer';
 import stripeRouter from './stripe/routes';
 import { sleep } from './utils';
 import { createEvmWriters } from './writers';
@@ -32,6 +34,10 @@ const checkpoint = new Checkpoint(schema, {
 const indexer = new evm.EvmIndexer(createEvmWriters(NETWORK));
 checkpoint.addIndexer(NETWORK, config, indexer);
 
+if (stripe) {
+  checkpoint.addIndexer('stripe', stripeConfig, new StripeIndexer());
+}
+
 async function run() {
   if (process.env.NODE_ENV === 'production') {
     console.log(
@@ -43,7 +49,6 @@ async function run() {
   await checkpoint.resetMetadata();
   await checkpoint.reset();
   checkpoint.start();
-  startStripeIndexer();
   startExpirationMonitor(checkpoint, config);
 }
 

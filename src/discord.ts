@@ -25,7 +25,7 @@ async function postToDiscord(body: DiscordMessage): Promise<void> {
 }
 
 const isRecent = (timestamp: number) =>
-  timestamp >= ~~(Date.now() / 1e3) - 60 * 60; // within the last hour
+  timestamp >= ~~(Date.now() / 1e3) - 2 * 60 * 60; // within the last 2 hours (> the 1h Stripe window)
 
 export async function notifyPayment(
   payment: Payment,
