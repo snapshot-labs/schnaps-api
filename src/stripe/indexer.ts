@@ -38,6 +38,9 @@ async function fetchWindowData(from: number, to: number): Promise<WindowData> {
         limit: 100
       })
     ),
+    // events.list retains only ~30 days, so cancellations are not replayable;
+    // fine for notification-only. If cancellation ever mutates state again,
+    // switch to a durable source (subscriptions.list, no ended_at range filter).
     Array.fromAsync(
       stripe.events.list({
         type: SUBSCRIPTION_DELETED,
