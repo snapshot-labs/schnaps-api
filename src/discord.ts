@@ -123,6 +123,24 @@ export async function notifyStripeRefund(
   });
 }
 
+export async function notifyStripeCancellation(
+  space: string,
+  timestamp: number,
+  reason?: string | null,
+  turboExpiration?: number | null
+): Promise<void> {
+  if (!isRecent(timestamp)) return;
+
+  const detail = reason ? ` (${reason})` : '';
+  const turbo =
+    turboExpiration && turboExpiration > timestamp
+      ? ` — turbo runs until ${new Date(turboExpiration * 1000).toDateString()}`
+      : '';
+  await postToDiscord({
+    content: `🚫 Stripe subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail}${turbo}`
+  });
+}
+
 export async function sendExpirationNotification(
   categorizedSpaces: CategorizedSpaces
 ): Promise<void> {

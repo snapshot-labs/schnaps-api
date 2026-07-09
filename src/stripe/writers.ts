@@ -1,6 +1,10 @@
 import { Payment, Space } from '../../.checkpoint/models';
 import { NETWORK } from '../config';
-import { notifyStripePayment, notifyStripeRefund } from '../discord';
+import {
+  notifyStripeCancellation,
+  notifyStripePayment,
+  notifyStripeRefund
+} from '../discord';
 import { computeExpirationFromAmount } from '../writers';
 import { stripe } from './client';
 
@@ -19,6 +23,17 @@ export type StripeRefund = {
   created: number;
   status: string | null;
   payment_intent: string | { id: string } | null;
+};
+
+export type StripeSubscriptionEvent = {
+  id: string;
+  created: number;
+  data: { object: unknown };
+};
+
+type CanceledSubscription = {
+  metadata: Record<string, string> | null;
+  cancellation_details: { reason: string | null } | null;
 };
 
 export async function indexPayment(charge: StripeCharge): Promise<void> {
@@ -120,4 +135,23 @@ export async function refundPayment(refund: StripeRefund): Promise<void> {
   }
 
   notifyStripeRefund(space, refund.created, refundAmountDecimal);
+}
+
+export async function cancelSubscription(
+  event: StripeSubscriptionEvent
+): Promise<void> {
+  const subscription = event.data.object as CanceledSubscription;
+  const space = subscription.metadata?.space;
+  if (!space) return;
+
+  console.log('[stripe] subscription canceled for space', space);
+
+  const spaceEntity = await Space.loadEntity(space, NETWORK);
+
+  notifyStripeCancellation(
+    space,
+    event.created,
+    subscription.cancellation_details?.reason,
+    spaceEntity?.turbo_expiration
+  );
 }

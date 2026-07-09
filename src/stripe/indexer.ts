@@ -6,21 +6,26 @@ import {
 import { stripe } from './client';
 import { WINDOW } from './config';
 import {
+  cancelSubscription,
   indexPayment,
   refundPayment,
   StripeCharge,
-  StripeRefund
+  StripeRefund,
+  StripeSubscriptionEvent
 } from './writers';
+
+const SUBSCRIPTION_DELETED = 'customer.subscription.deleted';
 
 type WindowData = {
   charges: StripeCharge[];
   refunds: StripeRefund[];
+  cancellations: StripeSubscriptionEvent[];
 };
 
 async function fetchWindowData(from: number, to: number): Promise<WindowData> {
-  if (!stripe) return { charges: [], refunds: [] };
+  if (!stripe) return { charges: [], refunds: [], cancellations: [] };
 
-  const [charges, refunds] = await Promise.all([
+  const [charges, refunds, cancellations] = await Promise.all([
     Array.fromAsync(
       stripe.charges.list({
         created: { gte: from, lt: to },
@@ -32,10 +37,20 @@ async function fetchWindowData(from: number, to: number): Promise<WindowData> {
         created: { gte: from, lt: to },
         limit: 100
       })
+    ),
+    // events.list retains only ~30 days, so cancellations are not replayable;
+    // fine for notification-only. If cancellation ever mutates state again,
+    // switch to a durable source (subscriptions.list, no ended_at range filter).
+    Array.fromAsync(
+      stripe.events.list({
+        type: SUBSCRIPTION_DELETED,
+        created: { gte: from, lt: to },
+        limit: 100
+      })
     )
   ]);
 
-  return { charges, refunds };
+  return { charges, refunds, cancellations };
 }
 
 async function processWindow(data: WindowData): Promise<void> {
@@ -54,6 +69,14 @@ async function processWindow(data: WindowData): Promise<void> {
       await refundPayment(refund);
     } catch (err) {
       console.error('[stripe] indexer: failed to refund', refund.id, err);
+    }
+  }
+
+  for (const event of data.cancellations) {
+    try {
+      await cancelSubscription(event);
+    } catch (err) {
+      console.error('[stripe] indexer: failed to cancel', event.id, err);
     }
   }
 }
@@ -112,7 +135,7 @@ class StripeProvider extends BaseProvider {
       windows.add(block);
       let bucket = this.windowsCache.get(block);
       if (!bucket) {
-        bucket = { charges: [], refunds: [] };
+        bucket = { charges: [], refunds: [], cancellations: [] };
         this.windowsCache.set(block, bucket);
       }
       return bucket;
@@ -123,6 +146,9 @@ class StripeProvider extends BaseProvider {
     }
     for (const refund of data.refunds) {
       bucketFor(refund.created).refunds.push(refund);
+    }
+    for (const event of data.cancellations) {
+      bucketFor(event.created).cancellations.push(event);
     }
 
     return [...windows].map(blockNumber => ({
