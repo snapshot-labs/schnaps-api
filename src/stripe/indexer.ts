@@ -4,85 +4,91 @@ import {
   BlockNotFoundError
 } from '@snapshot-labs/checkpoint';
 import { stripe } from './client';
-import { WINDOW } from './config';
-import {
-  cancelSubscription,
-  indexPayment,
-  refundPayment,
-  StripeCharge,
-  StripeRefund,
-  StripeSubscriptionEvent
-} from './writers';
+import { STRIPE_EVENTS, WINDOW } from './config';
+import { createStripeWriters, StripeItem, StripeWriter } from './writers';
 
-const SUBSCRIPTION_DELETED = 'customer.subscription.deleted';
-
-type WindowData = {
-  charges: StripeCharge[];
-  refunds: StripeRefund[];
-  cancellations: StripeSubscriptionEvent[];
+type StripeSource = {
+  fetch: (from: number, to: number) => Promise<StripeItem[]>;
+  // Charges must run oldest-first: turbo accrues in payment order.
+  ordered?: boolean;
 };
 
-async function fetchWindowData(from: number, to: number): Promise<WindowData> {
-  if (!stripe) return { charges: [], refunds: [], cancellations: [] };
-
-  const [charges, refunds, cancellations] = await Promise.all([
-    Array.fromAsync(
-      stripe.charges.list({
-        created: { gte: from, lt: to },
-        limit: 100
-      })
-    ),
-    Array.fromAsync(
-      stripe.refunds.list({
-        created: { gte: from, lt: to },
-        limit: 100
-      })
-    ),
+const SOURCES: Record<string, StripeSource> = {
+  [STRIPE_EVENTS.CHARGE]: {
+    ordered: true,
+    fetch: (from, to) =>
+      Array.fromAsync(
+        stripe!.charges.list({ created: { gte: from, lt: to }, limit: 100 })
+      )
+  },
+  [STRIPE_EVENTS.REFUND]: {
+    fetch: (from, to) =>
+      Array.fromAsync(
+        stripe!.refunds.list({ created: { gte: from, lt: to }, limit: 100 })
+      )
+  },
+  [STRIPE_EVENTS.SUBSCRIPTION_DELETED]: {
     // events.list retains only ~30 days, so cancellations are not replayable;
     // fine for notification-only. If cancellation ever mutates state again,
     // switch to a durable source (subscriptions.list, no ended_at range filter).
-    Array.fromAsync(
-      stripe.events.list({
-        type: SUBSCRIPTION_DELETED,
-        created: { gte: from, lt: to },
-        limit: 100
-      })
-    )
-  ]);
-
-  return { charges, refunds, cancellations };
-}
-
-async function processWindow(data: WindowData): Promise<void> {
-  // Oldest first: expiration accumulates in the order payments were made.
-  data.charges.sort((a, b) => a.created - b.created);
-  for (const charge of data.charges) {
-    try {
-      await indexPayment(charge);
-    } catch (err) {
-      console.error('[stripe] indexer: failed to index', charge.id, err);
-    }
+    fetch: (from, to) =>
+      Array.fromAsync(
+        stripe!.events.list({
+          type: STRIPE_EVENTS.SUBSCRIPTION_DELETED,
+          created: { gte: from, lt: to },
+          limit: 100
+        })
+      )
   }
+};
 
-  for (const refund of data.refunds) {
-    try {
-      await refundPayment(refund);
-    } catch (err) {
-      console.error('[stripe] indexer: failed to refund', refund.id, err);
-    }
-  }
-
-  for (const event of data.cancellations) {
-    try {
-      await cancelSubscription(event);
-    } catch (err) {
-      console.error('[stripe] indexer: failed to cancel', event.id, err);
-    }
-  }
-}
+type WindowData = Record<string, StripeItem[]>;
 
 class StripeProvider extends BaseProvider {
+  private readonly writers: Record<string, StripeWriter>;
   private windowsCache = new Map<number, WindowData>();
+
+  constructor(
+    args: ConstructorParameters<typeof BaseProvider>[0] & {
+      writers: Record<string, StripeWriter>;
+    }
+  ) {
+    super(args);
+    this.writers = args.writers;
+  }
+
+  private events(): { name: string; fn: string }[] {
+    return (this.instance.config.sources ?? []).flatMap(
+      source => source.events
+    );
+  }
+
+  private async fetchWindow(from: number, to: number): Promise<WindowData> {
+    if (!stripe) return {};
+
+    const events = this.events();
+    const items = await Promise.all(
+      events.map(event => SOURCES[event.name].fetch(from, to))
+    );
+    return Object.fromEntries(events.map((event, i) => [event.name, items[i]]));
+  }
+
+  private async processWindow(data: WindowData): Promise<void> {
+    for (const event of this.events()) {
+      const writer = this.writers[event.fn];
+      const items = data[event.name] ?? [];
+      if (SOURCES[event.name].ordered) {
+        items.sort((a, b) => a.created - b.created);
+      }
+      for (const item of items) {
+        try {
+          await writer(item);
+        } catch (err) {
+          console.error(`[stripe] indexer: ${event.fn} failed`, item.id, err);
+        }
+      }
+    }
+  }
 
   formatAddresses(addresses: string[]): string[] {
     return addresses;
@@ -107,10 +113,13 @@ class StripeProvider extends BaseProvider {
 
     const data =
       this.windowsCache.get(blockNumber) ??
-      (await fetchWindowData(blockNumber * WINDOW, (blockNumber + 1) * WINDOW));
+      (await this.fetchWindow(
+        blockNumber * WINDOW,
+        (blockNumber + 1) * WINDOW
+      ));
     this.windowsCache.delete(blockNumber);
 
-    await processWindow(data);
+    await this.processWindow(data);
     await this.instance.setBlockHash(
       blockNumber,
       await this.getBlockHash(blockNumber)
@@ -124,31 +133,23 @@ class StripeProvider extends BaseProvider {
     fromBlock: number,
     toBlock: number
   ): Promise<{ blockNumber: number; contractAddress: string }[]> {
-    const data = await fetchWindowData(
+    const data = await this.fetchWindow(
       fromBlock * WINDOW,
       (toBlock + 1) * WINDOW
     );
 
     const windows = new Set<number>();
-    const bucketFor = (created: number): WindowData => {
-      const block = ~~(created / WINDOW);
-      windows.add(block);
-      let bucket = this.windowsCache.get(block);
-      if (!bucket) {
-        bucket = { charges: [], refunds: [], cancellations: [] };
-        this.windowsCache.set(block, bucket);
+    for (const event of this.events()) {
+      for (const item of data[event.name] ?? []) {
+        const block = ~~(item.created / WINDOW);
+        windows.add(block);
+        let bucket = this.windowsCache.get(block);
+        if (!bucket) {
+          bucket = {};
+          this.windowsCache.set(block, bucket);
+        }
+        (bucket[event.name] ??= []).push(item);
       }
-      return bucket;
-    };
-
-    for (const charge of data.charges) {
-      bucketFor(charge.created).charges.push(charge);
-    }
-    for (const refund of data.refunds) {
-      bucketFor(refund.created).refunds.push(refund);
-    }
-    for (const event of data.cancellations) {
-      bucketFor(event.created).cancellations.push(event);
     }
 
     return [...windows].map(blockNumber => ({
@@ -159,11 +160,18 @@ class StripeProvider extends BaseProvider {
 }
 
 export class StripeIndexer extends BaseIndexer {
+  private writers: Record<string, StripeWriter>;
+
+  constructor(writers: Record<string, StripeWriter> = createStripeWriters()) {
+    super();
+    this.writers = writers;
+  }
+
   init(args: Parameters<BaseIndexer['init']>[0]): void {
-    this.provider = new StripeProvider(args);
+    this.provider = new StripeProvider({ ...args, writers: this.writers });
   }
 
   getHandlers(): string[] {
-    return [];
+    return Object.keys(this.writers);
   }
 }

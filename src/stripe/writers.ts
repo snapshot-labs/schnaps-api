@@ -10,24 +10,21 @@ import { stripe } from './client';
 
 const CENTS_TO_RAW = 10000n; // USD cents → 6-decimal token raw (10^6 / 10^2)
 
-export type StripeCharge = {
-  id: string;
-  created: number;
+export type StripeItem = { id: string; created: number };
+export type StripeWriter = (item: StripeItem) => Promise<void>;
+
+export type StripeCharge = StripeItem & {
   status: string;
   payment_intent: string | { id: string } | null;
 };
 
-export type StripeRefund = {
-  id: string;
+export type StripeRefund = StripeItem & {
   amount: number;
-  created: number;
   status: string | null;
   payment_intent: string | { id: string } | null;
 };
 
-export type StripeSubscriptionEvent = {
-  id: string;
-  created: number;
+export type StripeSubscriptionEvent = StripeItem & {
   data: { object: unknown };
 };
 
@@ -36,7 +33,12 @@ type CanceledSubscription = {
   cancellation_details: { reason: string | null } | null;
 };
 
-export async function indexPayment(charge: StripeCharge): Promise<void> {
+export function createStripeWriters(): Record<string, StripeWriter> {
+  return { indexPayment, refundPayment, cancelSubscription };
+}
+
+async function indexPayment(item: StripeItem): Promise<void> {
+  const charge = item as StripeCharge;
   const paymentIntent = charge.payment_intent;
   const paymentIntentId =
     typeof paymentIntent === 'string' ? paymentIntent : paymentIntent?.id;
@@ -96,7 +98,8 @@ export async function indexPayment(charge: StripeCharge): Promise<void> {
   notifyStripePayment(payment, spaceEntity, invoice.livemode);
 }
 
-export async function refundPayment(refund: StripeRefund): Promise<void> {
+async function refundPayment(item: StripeItem): Promise<void> {
+  const refund = item as StripeRefund;
   const paymentIntent = refund.payment_intent;
   const paymentIntentId =
     typeof paymentIntent === 'string' ? paymentIntent : paymentIntent?.id;
@@ -137,9 +140,8 @@ export async function refundPayment(refund: StripeRefund): Promise<void> {
   notifyStripeRefund(space, refund.created, refundAmountDecimal);
 }
 
-export async function cancelSubscription(
-  event: StripeSubscriptionEvent
-): Promise<void> {
+async function cancelSubscription(item: StripeItem): Promise<void> {
+  const event = item as StripeSubscriptionEvent;
   const subscription = event.data.object as CanceledSubscription;
   const space = subscription.metadata?.space;
   if (!space) return;
