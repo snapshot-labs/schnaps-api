@@ -146,16 +146,9 @@ export async function cancelSubscription(
 
   console.log('[stripe] subscription canceled for space', space);
 
-  // End turbo at the cancellation time; leave an already-lapsed space untouched.
-  const spaceEntity = await Space.loadEntity(space, NETWORK);
-  if (spaceEntity && spaceEntity.turbo_expiration > event.created) {
-    spaceEntity.turbo_expiration = event.created;
-    spaceEntity.turbo_expiration_date = new Date(
-      event.created * 1000
-    ).toDateString();
-    await spaceEntity.save();
-  }
-
+  // Notification only: per policy the space keeps its already-paid turbo until
+  // it lapses naturally. Turbo is only clawed back on refund (handled in
+  // refundPayment), never on plain cancellation, so we do not touch expiration.
   notifyStripeCancellation(
     space,
     event.created,
