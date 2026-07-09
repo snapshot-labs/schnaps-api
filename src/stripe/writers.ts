@@ -146,9 +146,12 @@ export async function cancelSubscription(
 
   console.log('[stripe] subscription canceled for space', space);
 
+  const spaceEntity = await Space.loadEntity(space, NETWORK);
+
   notifyStripeCancellation(
     space,
     event.created,
-    subscription.cancellation_details?.reason
+    subscription.cancellation_details?.reason,
+    spaceEntity?.turbo_expiration
   );
 }
