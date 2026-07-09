@@ -18,9 +18,12 @@ export const stripeConfig: CheckpointConfig = {
       contract: 'stripe',
       start: ~~(STRIPE_START_TS / WINDOW),
       events: [
-        { name: STRIPE_EVENTS.CHARGE, fn: 'indexPayment' },
-        { name: STRIPE_EVENTS.REFUND, fn: 'refundPayment' },
-        { name: STRIPE_EVENTS.SUBSCRIPTION_DELETED, fn: 'cancelSubscription' }
+        { name: STRIPE_EVENTS.CHARGE, fn: 'handleCharge' },
+        { name: STRIPE_EVENTS.REFUND, fn: 'handleRefund' },
+        {
+          name: STRIPE_EVENTS.SUBSCRIPTION_DELETED,
+          fn: 'handleSubscriptionDeleted'
+        }
       ]
     }
   ]

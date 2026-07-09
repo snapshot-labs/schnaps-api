@@ -13,18 +13,18 @@ const CENTS_TO_RAW = 10000n; // USD cents → 6-decimal token raw (10^6 / 10^2)
 export type StripeItem = { id: string; created: number };
 export type StripeWriter = (item: StripeItem) => Promise<void>;
 
-export type StripeCharge = StripeItem & {
+type StripeCharge = StripeItem & {
   status: string;
   payment_intent: string | { id: string } | null;
 };
 
-export type StripeRefund = StripeItem & {
+type StripeRefund = StripeItem & {
   amount: number;
   status: string | null;
   payment_intent: string | { id: string } | null;
 };
 
-export type StripeSubscriptionEvent = StripeItem & {
+type StripeSubscriptionEvent = StripeItem & {
   data: { object: unknown };
 };
 
@@ -34,10 +34,10 @@ type CanceledSubscription = {
 };
 
 export function createStripeWriters(): Record<string, StripeWriter> {
-  return { indexPayment, refundPayment, cancelSubscription };
+  return { handleCharge, handleRefund, handleSubscriptionDeleted };
 }
 
-async function indexPayment(item: StripeItem): Promise<void> {
+async function handleCharge(item: StripeItem): Promise<void> {
   const charge = item as StripeCharge;
   const paymentIntent = charge.payment_intent;
   const paymentIntentId =
@@ -98,7 +98,7 @@ async function indexPayment(item: StripeItem): Promise<void> {
   notifyStripePayment(payment, spaceEntity, invoice.livemode);
 }
 
-async function refundPayment(item: StripeItem): Promise<void> {
+async function handleRefund(item: StripeItem): Promise<void> {
   const refund = item as StripeRefund;
   const paymentIntent = refund.payment_intent;
   const paymentIntentId =
@@ -140,7 +140,7 @@ async function refundPayment(item: StripeItem): Promise<void> {
   notifyStripeRefund(space, refund.created, refundAmountDecimal);
 }
 
-async function cancelSubscription(item: StripeItem): Promise<void> {
+async function handleSubscriptionDeleted(item: StripeItem): Promise<void> {
   const event = item as StripeSubscriptionEvent;
   const subscription = event.data.object as CanceledSubscription;
   const space = subscription.metadata?.space;
