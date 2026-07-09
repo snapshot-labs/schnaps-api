@@ -146,9 +146,6 @@ export async function cancelSubscription(
 
   console.log('[stripe] subscription canceled for space', space);
 
-  // Notification only: per policy the space keeps its already-paid turbo until
-  // it lapses naturally. Turbo is only clawed back on refund (handled in
-  // refundPayment), never on plain cancellation, so we do not touch expiration.
   notifyStripeCancellation(
     space,
     event.created,
