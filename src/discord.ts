@@ -132,7 +132,7 @@ export async function notifyStripeCancellation(
 
   const detail = reason ? ` (${reason})` : '';
   await postToDiscord({
-    content: `🚫 Stripe subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail} — turbo runs until it lapses.`
+    content: `🚫 Stripe subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail}`
   });
 }
 
