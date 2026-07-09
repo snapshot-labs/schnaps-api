@@ -11,6 +11,7 @@ import { stripe } from './stripe/client';
 import { stripeConfig } from './stripe/config';
 import { StripeIndexer } from './stripe/indexer';
 import stripeRouter from './stripe/routes';
+import { createStripeWriters } from './stripe/writers';
 import { sleep } from './utils';
 import { createEvmWriters } from './writers';
 
@@ -35,7 +36,11 @@ const indexer = new evm.EvmIndexer(createEvmWriters(NETWORK));
 checkpoint.addIndexer(NETWORK, config, indexer);
 
 if (stripe) {
-  checkpoint.addIndexer('stripe', stripeConfig, new StripeIndexer());
+  checkpoint.addIndexer(
+    'stripe',
+    stripeConfig,
+    new StripeIndexer(createStripeWriters())
+  );
 }
 
 async function run() {
