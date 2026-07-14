@@ -52,7 +52,15 @@ router.get('/portal', async (_req, res) => {
       active: true,
       limit: 1
     });
-    const url = configs.data[0]?.login_page?.url;
+    let config = configs.data[0];
+
+    if (config && !config.login_page?.enabled) {
+      config = await stripe.billingPortal.configurations.update(config.id, {
+        login_page: { enabled: true }
+      });
+    }
+
+    const url = config?.login_page?.url;
     if (!url) return sendError(res, 'portal not configured');
     return res.json({ result: { url } });
   } catch (err) {
