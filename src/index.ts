@@ -7,6 +7,11 @@ import express from 'express';
 import { createConfig, NETWORK } from './config';
 import { startExpirationMonitor } from './expirationMonitor';
 import overrides from './overrides.json';
+import { stripe } from './stripe/client';
+import { stripeConfig } from './stripe/config';
+import { StripeIndexer } from './stripe/indexer';
+import stripeRouter from './stripe/routes';
+import { createStripeWriters } from './stripe/writers';
 import { sleep } from './utils';
 import { createEvmWriters } from './writers';
 
@@ -30,6 +35,14 @@ const checkpoint = new Checkpoint(schema, {
 const indexer = new evm.EvmIndexer(createEvmWriters(NETWORK));
 checkpoint.addIndexer(NETWORK, config, indexer);
 
+if (stripe) {
+  checkpoint.addIndexer(
+    'stripe',
+    stripeConfig,
+    new StripeIndexer(createStripeWriters())
+  );
+}
+
 async function run() {
   if (process.env.NODE_ENV === 'production') {
     console.log(
@@ -47,9 +60,10 @@ async function run() {
 run();
 
 const app = express();
+app.use(cors({ maxAge: 86400 }));
+app.use('/stripe', stripeRouter);
 app.use(express.json({ limit: '4mb' }));
 app.use(express.urlencoded({ limit: '4mb', extended: false }));
-app.use(cors({ maxAge: 86400 }));
 app.use('/', checkpoint.graphql);
 
 const PORT = process.env.PORT || 3000;

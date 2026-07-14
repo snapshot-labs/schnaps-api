@@ -1,4 +1,5 @@
 import { backOff } from 'exponential-backoff';
+import { Response } from 'express';
 
 export function getUrl(uri: string, gateway = 'pineapple.fyi') {
   const ipfsGateway = `https://${gateway}`;
@@ -44,3 +45,10 @@ export async function getJSON(uri: string) {
 
 export const sleep = (ms: number) =>
   new Promise(resolve => setTimeout(resolve, ms));
+
+export function sendError(res: Response, description: string, status = 500) {
+  return res.status(status).json({
+    error: status < 500 ? 'client_error' : 'server_error',
+    error_description: description
+  });
+}

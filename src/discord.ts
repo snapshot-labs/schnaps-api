@@ -25,7 +25,7 @@ async function postToDiscord(body: DiscordMessage): Promise<void> {
 }
 
 const isRecent = (timestamp: number) =>
-  timestamp >= ~~(Date.now() / 1e3) - 60 * 60; // within the last hour
+  timestamp >= ~~(Date.now() / 1e3) - 2 * 60 * 60; // within the last 2 hours (> the 1h Stripe window)
 
 export async function notifyPayment(
   payment: Payment,
@@ -68,6 +68,76 @@ export async function notifyPayment(
         timestamp: new Date(blockTimestamp * 1000).toISOString()
       }
     ]
+  });
+}
+
+export async function notifyStripePayment(
+  payment: Payment,
+  space: Space,
+  livemode: boolean
+): Promise<void> {
+  if (!isRecent(payment.timestamp)) return;
+
+  // payment.id is `stripe:<invoice_id>`; the dashboard resolves the invoice id
+  // directly under /invoices/. Test vs live comes from the invoice's livemode.
+  const invoiceId = payment.id.replace(/^stripe:/, '');
+  const dashboardUrl = `https://dashboard.stripe.com${livemode ? '' : '/test'}/invoices/${invoiceId}`;
+
+  await postToDiscord({
+    embeds: [
+      {
+        title: `💳 New payment of ${payment.amount_decimal} ${payment.token_symbol}`,
+        url: dashboardUrl,
+        fields: [
+          {
+            name: 'Space',
+            value: `[${payment.space}](${SNAPSHOT_BASE_URL}/#/${payment.space})`,
+            inline: true
+          },
+          {
+            name: 'Source',
+            value: 'Stripe',
+            inline: true
+          },
+          {
+            name: 'Expiration',
+            value: `<t:${space.turbo_expiration}:R>`,
+            inline: true
+          }
+        ],
+        timestamp: new Date(payment.timestamp * 1000).toISOString()
+      }
+    ]
+  });
+}
+
+export async function notifyStripeRefund(
+  space: string,
+  timestamp: number,
+  amount: string
+): Promise<void> {
+  if (!isRecent(timestamp)) return;
+
+  await postToDiscord({
+    content: `↩️ Stripe payment refunded ($${amount}) for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing) — turbo reduced.`
+  });
+}
+
+export async function notifyStripeCancellation(
+  space: string,
+  timestamp: number,
+  reason?: string | null,
+  turboExpiration?: number | null
+): Promise<void> {
+  if (!isRecent(timestamp)) return;
+
+  const detail = reason ? ` (${reason})` : '';
+  const turbo =
+    turboExpiration && turboExpiration > timestamp
+      ? ` — turbo runs until ${new Date(turboExpiration * 1000).toDateString()}`
+      : '';
+  await postToDiscord({
+    content: `🚫 Stripe subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail}${turbo}`
   });
 }
 
