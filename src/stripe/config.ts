@@ -1,6 +1,6 @@
 import { CheckpointConfig } from '@snapshot-labs/checkpoint';
 
-export const WINDOW = 3600; // a "block" is a 1h time window
+export const WINDOW = 60; // a "block" is a 1-minute time window
 const STRIPE_START_TS = 1767225600; // 2026-01-01, before the first payment
 
 export const STRIPE_EVENTS = {
@@ -12,7 +12,7 @@ export const STRIPE_EVENTS = {
 export const stripeConfig: CheckpointConfig = {
   network_node_url: 'https://api.stripe.com', // required by schema; never called
   optimistic_indexing: false,
-  fetch_interval: 60_000,
+  fetch_interval: 15_000,
   sources: [
     {
       contract: 'stripe',
