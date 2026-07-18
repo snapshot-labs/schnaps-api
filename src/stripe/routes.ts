@@ -8,7 +8,7 @@ const router = Router();
 router.post('/create', express.json(), async (req, res) => {
   if (!stripe) return sendError(res, 'stripe not configured');
 
-  const { space, plan, success_url, cancel_url } = req.body ?? {};
+  const { space, plan, email, success_url, cancel_url } = req.body ?? {};
 
   if (!space) {
     return sendError(res, 'missing space', 400);
@@ -19,8 +19,19 @@ router.post('/create', express.json(), async (req, res) => {
   }
 
   try {
+    // Reuse an existing customer for this email so subscriptions consolidate;
+    // for first-time buyers, let Checkout create it (prefilled) to avoid
+    // orphan customers on abandoned sessions.
+    let customer: string | undefined;
+    if (email) {
+      const existing = await stripe.customers.list({ email, limit: 1 });
+      customer = existing.data[0]?.id;
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
+      customer,
+      customer_email: customer ? undefined : email,
       line_items: [
         {
           price_data: {
