@@ -20,10 +20,10 @@ const FETCHERS: Record<
       stripe!.refunds.list({ created: { gte: from, lt: to }, limit: 100 })
     ),
   // events.list retains only ~30 days, so cancellations are not replayable.
-  [STRIPE_EVENTS.SUBSCRIPTION_DELETED]: (from, to) =>
+  [STRIPE_EVENTS.SUBSCRIPTION_UPDATED]: (from, to) =>
     Array.fromAsync(
       stripe!.events.list({
-        type: STRIPE_EVENTS.SUBSCRIPTION_DELETED,
+        type: STRIPE_EVENTS.SUBSCRIPTION_UPDATED,
         created: { gte: from, lt: to },
         limit: 100
       })

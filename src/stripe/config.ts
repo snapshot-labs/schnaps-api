@@ -6,7 +6,7 @@ const STRIPE_START_TS = 1767225600; // 2026-01-01, before the first payment
 export const STRIPE_EVENTS = {
   CHARGE: 'charge',
   REFUND: 'refund',
-  SUBSCRIPTION_DELETED: 'customer.subscription.deleted'
+  SUBSCRIPTION_UPDATED: 'customer.subscription.updated'
 } as const;
 
 export const stripeConfig: CheckpointConfig = {
@@ -21,8 +21,8 @@ export const stripeConfig: CheckpointConfig = {
         { name: STRIPE_EVENTS.CHARGE, fn: 'handleCharge' },
         { name: STRIPE_EVENTS.REFUND, fn: 'handleRefund' },
         {
-          name: STRIPE_EVENTS.SUBSCRIPTION_DELETED,
-          fn: 'handleSubscriptionDeleted'
+          name: STRIPE_EVENTS.SUBSCRIPTION_UPDATED,
+          fn: 'handleSubscriptionUpdated'
         }
       ]
     }

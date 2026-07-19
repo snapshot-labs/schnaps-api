@@ -25,16 +25,17 @@ type StripeRefund = StripeItem & {
 };
 
 type StripeSubscriptionEvent = StripeItem & {
-  data: { object: unknown };
+  data: { object: unknown; previous_attributes?: unknown };
 };
 
-type CanceledSubscription = {
+type Subscription = {
+  cancel_at: number | null;
   metadata: Record<string, string> | null;
-  cancellation_details: { reason: string | null } | null;
+  cancellation_details: { feedback: string | null } | null;
 };
 
 export function createStripeWriters(): Record<string, StripeWriter> {
-  return { handleCharge, handleRefund, handleSubscriptionDeleted };
+  return { handleCharge, handleRefund, handleSubscriptionUpdated };
 }
 
 async function handleCharge(item: StripeItem): Promise<void> {
@@ -140,20 +141,23 @@ async function handleRefund(item: StripeItem): Promise<void> {
   notifyStripeRefund(space, refund.created, refundAmountDecimal);
 }
 
-async function handleSubscriptionDeleted(item: StripeItem): Promise<void> {
+async function handleSubscriptionUpdated(item: StripeItem): Promise<void> {
   const event = item as StripeSubscriptionEvent;
-  const subscription = event.data.object as CanceledSubscription;
+  const subscription = event.data.object as Subscription;
+  const prev = (event.data.previous_attributes ?? {}) as Partial<Subscription>;
   const space = subscription.metadata?.space;
   if (!space) return;
 
-  console.log('[stripe] subscription canceled for space', space);
+  // Portal cancellations schedule at period end, so only `updated` fires;
+  // the cancel_at null → set transition filters out other subscription edits.
+  if (prev.cancel_at !== null || !subscription.cancel_at) return;
 
-  const spaceEntity = await Space.loadEntity(space, NETWORK);
+  console.log('[stripe] subscription canceled for space', space);
 
   notifyStripeCancellation(
     space,
     event.created,
-    subscription.cancellation_details?.reason,
-    spaceEntity?.turbo_expiration
+    subscription.cancellation_details?.feedback,
+    subscription.cancel_at
   );
 }
