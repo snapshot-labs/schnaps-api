@@ -8,10 +8,10 @@ const router = Router();
 router.post('/create', express.json(), async (req, res) => {
   if (!stripe) return sendError(res, 'stripe not configured');
 
-  const { space, plan, success_url, cancel_url } = req.body ?? {};
+  const { space, plan, ref, success_url, cancel_url } = req.body ?? {};
 
-  if (!space) {
-    return sendError(res, 'missing space', 400);
+  if (typeof space !== 'string' || !/^[\w-]+:[\w.-]+$/.test(space)) {
+    return sendError(res, 'missing or invalid space', 400);
   }
 
   if (!PLANS.includes(plan)) {
@@ -19,6 +19,14 @@ router.post('/create', express.json(), async (req, res) => {
   }
 
   try {
+    const { data } = await stripe.subscriptions.search({
+      query: `status:'active' AND metadata['space']:'${space}'`,
+      limit: 1
+    });
+    if (data.length) {
+      return sendError(res, 'space already has an active subscription', 409);
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [
@@ -32,7 +40,14 @@ router.post('/create', express.json(), async (req, res) => {
           quantity: 1
         }
       ],
-      subscription_data: { metadata: { space } },
+      subscription_data: {
+        metadata: {
+          space,
+          ...(typeof ref === 'string' && ref && ref.length <= 100
+            ? { ref }
+            : {})
+        }
+      },
       success_url,
       cancel_url
     });
@@ -57,6 +72,35 @@ router.get('/portal', async (_req, res) => {
     return res.json({ result: { url } });
   } catch (err) {
     console.error('[stripe] /portal failed:', err);
+    return sendError(res, err instanceof Error ? err.message : 'failed');
+  }
+});
+
+// Crypto payments never create a Stripe subscription, so any match is a card one
+router.get('/subscription', async (req, res) => {
+  if (!stripe) return res.json({ result: { stripeAvailable: false } });
+
+  const { space } = req.query;
+  if (typeof space !== 'string' || !/^[\w-]+:[\w.-]+$/.test(space)) {
+    return sendError(res, 'missing or invalid space', 400);
+  }
+
+  try {
+    const { data } = await stripe.subscriptions.search({
+      query: `status:'active' AND metadata['space']:'${space}'`,
+      limit: 1
+    });
+    const subscription = data[0];
+    return res.json({
+      result: {
+        stripeAvailable: true,
+        activeSubscription: !!subscription,
+        cancelAtPeriodEnd: subscription?.cancel_at_period_end ?? false,
+        renewsAt: subscription?.items.data[0]?.current_period_end ?? null
+      }
+    });
+  } catch (err) {
+    console.error('[stripe] /subscription failed:', err);
     return sendError(res, err instanceof Error ? err.message : 'failed');
   }
 });

@@ -56,6 +56,7 @@ async function handleCharge(item: StripeItem): Promise<void> {
   if (!invoice || typeof invoice === 'string' || 'deleted' in invoice) return;
 
   const space = invoice.parent?.subscription_details?.metadata?.space;
+  const ref = invoice.parent?.subscription_details?.metadata?.ref;
   const amountCents = invoice.amount_paid;
 
   if (!space || !amountCents) {
@@ -82,6 +83,7 @@ async function handleCharge(item: StripeItem): Promise<void> {
   payment.timestamp = timestamp;
   payment.type = 'turbo';
   payment.space = space;
+  if (typeof ref === 'string' && ref) payment.ref = ref;
   await payment.save();
 
   let spaceEntity = await Space.loadEntity(space, NETWORK);
