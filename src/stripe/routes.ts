@@ -5,6 +5,18 @@ import { stripe } from './client';
 
 const router = Router();
 
+// Crypto payments never create a Stripe subscription, so any match is a card one
+async function findActiveSubscription(
+  client: NonNullable<typeof stripe>,
+  space: string
+) {
+  const { data } = await client.subscriptions.search({
+    query: `status:'active' AND metadata['space']:'${space}'`,
+    limit: 1
+  });
+  return data[0];
+}
+
 router.post('/create', express.json(), async (req, res) => {
   if (!stripe) return sendError(res, 'stripe not configured');
 
@@ -19,11 +31,7 @@ router.post('/create', express.json(), async (req, res) => {
   }
 
   try {
-    const { data } = await stripe.subscriptions.search({
-      query: `status:'active' AND metadata['space']:'${space}'`,
-      limit: 1
-    });
-    if (data.length) {
+    if (await findActiveSubscription(stripe, space)) {
       return sendError(res, 'space already has an active subscription', 409);
     }
 
@@ -76,7 +84,6 @@ router.get('/portal', async (_req, res) => {
   }
 });
 
-// Crypto payments never create a Stripe subscription, so any match is a card one
 router.get('/subscription', async (req, res) => {
   if (!stripe) return res.json({ result: { stripeAvailable: false } });
 
@@ -86,11 +93,7 @@ router.get('/subscription', async (req, res) => {
   }
 
   try {
-    const { data } = await stripe.subscriptions.search({
-      query: `status:'active' AND metadata['space']:'${space}'`,
-      limit: 1
-    });
-    const subscription = data[0];
+    const subscription = await findActiveSubscription(stripe, space);
     return res.json({
       result: {
         stripeAvailable: true,
