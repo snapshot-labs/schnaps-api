@@ -5,6 +5,40 @@ import { stripe } from './client';
 
 const router = Router();
 
+const INDEX_TESTNET = process.env.INDEX_TESTNET;
+
+const SPACE_NETWORK = INDEX_TESTNET ? 's-tn' : 's';
+const HUB_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}hub.snapshot.org/graphql`;
+
+async function isValidSpace(space: unknown): Promise<boolean> {
+  if (typeof space !== 'string' || !space.startsWith(`${SPACE_NETWORK}:`)) {
+    return false;
+  }
+
+  const id = space.slice(SPACE_NETWORK.length + 1);
+
+  try {
+    const res = await fetch(HUB_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(5_000),
+      body: JSON.stringify({
+        query: 'query Space($id: String!) { space(id: $id) { id } }',
+        variables: { id }
+      })
+    });
+    if (!res.ok) return false;
+
+    const { data } = (await res.json()) as {
+      data?: { space?: { id: string } | null };
+    };
+    return data?.space?.id === id;
+  } catch (err) {
+    console.error('[stripe] space validation failed:', err);
+    return false;
+  }
+}
+
 async function findActiveSubscription(
   client: NonNullable<typeof stripe>,
   space: string
@@ -21,7 +55,7 @@ router.post('/create', express.json(), async (req, res) => {
 
   const { space, plan, ref, success_url, cancel_url } = req.body ?? {};
 
-  if (typeof space !== 'string' || !/^[\w-]+:[\w.-]+$/.test(space)) {
+  if (!(await isValidSpace(space))) {
     return sendError(res, 'missing or invalid space', 400);
   }
 
@@ -87,7 +121,7 @@ router.get('/subscription', async (req, res) => {
   if (!stripe) return res.json({ result: { stripeAvailable: false } });
 
   const { space } = req.query;
-  if (typeof space !== 'string' || !/^[\w-]+:[\w.-]+$/.test(space)) {
+  if (!(await isValidSpace(space))) {
     return sendError(res, 'missing or invalid space', 400);
   }
 
