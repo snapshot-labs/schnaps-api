@@ -3,21 +3,22 @@
   "version": "0.1.0",
   "license": "MIT",
   "description": "Indexer for the Schnaps payment contract",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "codegen": "checkpoint generate",
-    "lint": "eslint src/ --ext .ts --fix",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "prebuild": "yarn codegen",
     "build": "tsc",
     "dev": "nodemon src/index.ts",
     "start": "node dist/src/index.js",
     "predev": "yarn codegen"
   },
-  "eslintConfig": {
-    "extends": "@snapshot-labs"
-  },
   "prettier": "@snapshot-labs/prettier-config",
   "dependencies": {
-    "@snapshot-labs/checkpoint": "0.1.0-beta.68",
+    "@snapshot-labs/checkpoint": "0.1.0-beta.74",
     "@types/node": "^24.10.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.1",
@@ -30,9 +31,9 @@
     "viem": "^2.38.6"
   },
   "devDependencies": {
-    "@snapshot-labs/eslint-config": "^0.1.0-beta.21",
-    "@snapshot-labs/prettier-config": "^0.1.0-beta.19",
-    "eslint": "^8.57.0",
+    "@snapshot-labs/eslint-config": "^0.1.1",
+    "@snapshot-labs/prettier-config": "^0.1.0",
+    "eslint": "^9.0.0",
     "knex": "^3.1.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
