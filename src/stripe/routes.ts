@@ -5,7 +5,6 @@ import { stripe } from './client';
 
 const router = Router();
 
-// Crypto payments never create a Stripe subscription, so any match is a card one
 async function findActiveSubscription(
   client: NonNullable<typeof stripe>,
   space: string
