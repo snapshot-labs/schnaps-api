@@ -39,15 +39,17 @@ async function isValidSpace(space: unknown): Promise<boolean> {
   }
 }
 
+const SUBSCRIBED_STATUSES = ['active', 'past_due'];
+
 async function findActiveSubscription(
   client: NonNullable<typeof stripe>,
   space: string
 ) {
   const { data } = await client.subscriptions.search({
-    query: `status:'active' AND metadata['space']:'${space}'`,
-    limit: 1
+    query: `metadata['space']:'${space}'`,
+    limit: 10
   });
-  return data[0];
+  return data.find(s => SUBSCRIBED_STATUSES.includes(s.status));
 }
 
 router.post('/create', express.json(), async (req, res) => {
@@ -131,6 +133,7 @@ router.get('/subscription', async (req, res) => {
       result: {
         stripeAvailable: true,
         activeSubscription: !!subscription,
+        pastDue: subscription?.status === 'past_due',
         cancelAtPeriodEnd: subscription?.cancel_at_period_end ?? false,
         renewsAt: subscription?.items.data[0]?.current_period_end ?? null
       }
