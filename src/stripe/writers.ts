@@ -7,6 +7,7 @@ import {
 } from '../discord';
 import { computeExpirationFromAmount } from '../writers';
 import { stripe } from './client';
+import { STRIPE_EVENTS } from './config';
 
 const CENTS_TO_RAW = 10000n; // USD cents → 6-decimal token raw (10^6 / 10^2)
 
@@ -25,17 +26,21 @@ type StripeRefund = StripeItem & {
 };
 
 type StripeSubscriptionEvent = StripeItem & {
+  type: string;
   data: { object: unknown; previous_attributes?: unknown };
 };
 
 type Subscription = {
   cancel_at: number | null;
   metadata: Record<string, string> | null;
-  cancellation_details: { feedback: string | null } | null;
+  cancellation_details: {
+    feedback: string | null;
+    reason: string | null;
+  } | null;
 };
 
 export function createStripeWriters(): Record<string, StripeWriter> {
-  return { handleCharge, handleRefund, handleSubscriptionUpdated };
+  return { handleCharge, handleRefund, handleSubscriptionCancellation };
 }
 
 async function handleCharge(item: StripeItem): Promise<void> {
@@ -143,23 +148,28 @@ async function handleRefund(item: StripeItem): Promise<void> {
   notifyStripeRefund(space, refund.created, refundAmountDecimal);
 }
 
-async function handleSubscriptionUpdated(item: StripeItem): Promise<void> {
+async function handleSubscriptionCancellation(item: StripeItem): Promise<void> {
   const event = item as StripeSubscriptionEvent;
   const subscription = event.data.object as Subscription;
   const prev = (event.data.previous_attributes ?? {}) as Partial<Subscription>;
   const space = subscription.metadata?.space;
   if (!space) return;
 
-  // Portal cancellations schedule at period end, so only `updated` fires;
-  // the cancel_at null → set transition filters out other subscription edits.
-  if (prev.cancel_at !== null || !subscription.cancel_at) return;
+  // Portal cancellations schedule at period end (`updated`, cancel_at
+  // null → set); immediate cancels arrive as `deleted` with no cancel_at.
+  const shouldNotify =
+    event.type === STRIPE_EVENTS.SUBSCRIPTION_DELETED
+      ? !subscription.cancel_at
+      : prev.cancel_at === null && !!subscription.cancel_at;
+  if (!shouldNotify) return;
 
   console.log('[stripe] subscription canceled for space', space);
 
   notifyStripeCancellation(
     space,
     event.created,
-    subscription.cancellation_details?.feedback,
+    subscription.cancellation_details?.feedback ??
+      subscription.cancellation_details?.reason,
     subscription.cancel_at
   );
 }

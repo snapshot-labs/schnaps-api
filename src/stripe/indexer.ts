@@ -27,6 +27,14 @@ const FETCHERS: Record<
         created: { gte: from, lt: to },
         limit: 100
       })
+    ),
+  [STRIPE_EVENTS.SUBSCRIPTION_DELETED]: (from, to) =>
+    Array.fromAsync(
+      stripe!.events.list({
+        type: STRIPE_EVENTS.SUBSCRIPTION_DELETED,
+        created: { gte: from, lt: to },
+        limit: 100
+      })
     )
 };
 
