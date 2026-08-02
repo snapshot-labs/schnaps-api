@@ -5,13 +5,60 @@ import { stripe } from './client';
 
 const router = Router();
 
+const INDEX_TESTNET = process.env.INDEX_TESTNET;
+
+const SPACE_NETWORK = INDEX_TESTNET ? 's-tn' : 's';
+const HUB_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}hub.snapshot.org/graphql`;
+
+async function isValidSpace(space: unknown): Promise<boolean> {
+  if (typeof space !== 'string' || !space.startsWith(`${SPACE_NETWORK}:`)) {
+    return false;
+  }
+
+  const id = space.slice(SPACE_NETWORK.length + 1);
+
+  try {
+    const res = await fetch(HUB_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(5_000),
+      body: JSON.stringify({
+        query: 'query Space($id: String!) { space(id: $id) { id } }',
+        variables: { id }
+      })
+    });
+    if (!res.ok) return false;
+
+    const { data } = (await res.json()) as {
+      data?: { space?: { id: string } | null };
+    };
+    return data?.space?.id === id;
+  } catch (err) {
+    console.error('[stripe] space validation failed:', err);
+    return false;
+  }
+}
+
+const SUBSCRIBED_STATUSES = ['active', 'past_due'];
+
+async function findActiveSubscription(
+  client: NonNullable<typeof stripe>,
+  space: string
+) {
+  const { data } = await client.subscriptions.search({
+    query: `metadata['space']:'${space}'`,
+    limit: 10
+  });
+  return data.find(s => SUBSCRIBED_STATUSES.includes(s.status));
+}
+
 router.post('/create', express.json(), async (req, res) => {
   if (!stripe) return sendError(res, 'stripe not configured');
 
-  const { space, plan, success_url, cancel_url } = req.body ?? {};
+  const { space, plan, ref, success_url, cancel_url } = req.body ?? {};
 
-  if (!space) {
-    return sendError(res, 'missing space', 400);
+  if (!(await isValidSpace(space))) {
+    return sendError(res, 'missing or invalid space', 400);
   }
 
   if (!PLANS.includes(plan)) {
@@ -19,6 +66,10 @@ router.post('/create', express.json(), async (req, res) => {
   }
 
   try {
+    if (await findActiveSubscription(stripe, space)) {
+      return sendError(res, 'space already has an active subscription', 409);
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       line_items: [
@@ -32,7 +83,14 @@ router.post('/create', express.json(), async (req, res) => {
           quantity: 1
         }
       ],
-      subscription_data: { metadata: { space } },
+      subscription_data: {
+        metadata: {
+          space,
+          ...(typeof ref === 'string' && ref && ref.length <= 100
+            ? { ref }
+            : {})
+        }
+      },
       success_url,
       cancel_url
     });
@@ -57,6 +115,31 @@ router.get('/portal', async (_req, res) => {
     return res.json({ result: { url } });
   } catch (err) {
     console.error('[stripe] /portal failed:', err);
+    return sendError(res, err instanceof Error ? err.message : 'failed');
+  }
+});
+
+router.get('/subscription', async (req, res) => {
+  if (!stripe) return res.json({ result: { stripeAvailable: false } });
+
+  const { space } = req.query;
+  if (!(await isValidSpace(space))) {
+    return sendError(res, 'missing or invalid space', 400);
+  }
+
+  try {
+    const subscription = await findActiveSubscription(stripe, space);
+    return res.json({
+      result: {
+        stripeAvailable: true,
+        activeSubscription: !!subscription,
+        pastDue: subscription?.status === 'past_due',
+        cancelAtPeriodEnd: subscription?.cancel_at_period_end ?? false,
+        renewsAt: subscription?.items.data[0]?.current_period_end ?? null
+      }
+    });
+  } catch (err) {
+    console.error('[stripe] /subscription failed:', err);
     return sendError(res, err instanceof Error ? err.message : 'failed');
   }
 });
