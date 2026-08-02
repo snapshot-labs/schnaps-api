@@ -23,11 +23,11 @@ export const stripeConfig: CheckpointConfig = {
         { name: STRIPE_EVENTS.REFUND, fn: 'handleRefund' },
         {
           name: STRIPE_EVENTS.SUBSCRIPTION_UPDATED,
-          fn: 'handleSubscriptionCancellation'
+          fn: 'handleSubscriptionUpdated'
         },
         {
           name: STRIPE_EVENTS.SUBSCRIPTION_DELETED,
-          fn: 'handleSubscriptionCancellation'
+          fn: 'handleSubscriptionDeleted'
         }
       ]
     }
