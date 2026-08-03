@@ -30,12 +30,21 @@ type StripeSubscriptionEvent = StripeItem & {
 
 type Subscription = {
   cancel_at: number | null;
+  cancel_at_period_end: boolean;
   metadata: Record<string, string> | null;
-  cancellation_details: { feedback: string | null } | null;
+  cancellation_details: {
+    feedback: string | null;
+    reason: string | null;
+  } | null;
 };
 
 export function createStripeWriters(): Record<string, StripeWriter> {
-  return { handleCharge, handleRefund, handleSubscriptionUpdated };
+  return {
+    handleCharge,
+    handleRefund,
+    handleSubscriptionUpdated,
+    handleSubscriptionDeleted
+  };
 }
 
 async function handleCharge(item: StripeItem): Promise<void> {
@@ -162,4 +171,21 @@ async function handleSubscriptionUpdated(item: StripeItem): Promise<void> {
     subscription.cancellation_details?.feedback,
     subscription.cancel_at
   );
+}
+
+async function handleSubscriptionDeleted(item: StripeItem): Promise<void> {
+  const event = item as StripeSubscriptionEvent;
+  const subscription = event.data.object as Subscription;
+  const space = subscription.metadata?.space;
+  if (!space) return;
+
+  if (subscription.cancel_at_period_end || subscription.cancel_at) return;
+
+  console.log('[stripe] subscription deleted for space', space);
+
+  const details = subscription.cancellation_details;
+  const reason =
+    details?.reason === 'cancellation_requested' ? null : details?.reason;
+
+  notifyStripeCancellation(space, event.created, details?.feedback ?? reason);
 }
