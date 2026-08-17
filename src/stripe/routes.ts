@@ -1,3 +1,4 @@
+import { capture } from '@snapshot-labs/snapshot-sentry';
 import express, { Router } from 'express';
 import { PLANS, TURBO_PRICE_CENTS } from '../config';
 import { sendError } from '../utils';
@@ -34,6 +35,7 @@ async function isValidSpace(space: unknown): Promise<boolean> {
     };
     return data?.space?.id === id;
   } catch (err) {
+    capture(err);
     console.error('[stripe] space validation failed:', err);
     return false;
   }
@@ -96,6 +98,7 @@ router.post('/create', express.json(), async (req, res) => {
     });
     return res.json({ result: { url: session.url } });
   } catch (err) {
+    capture(err);
     console.error('[stripe] /create failed:', err);
     return sendError(res, err instanceof Error ? err.message : 'failed');
   }
@@ -114,6 +117,7 @@ router.get('/portal', async (_req, res) => {
     if (!url) return sendError(res, 'portal not configured');
     return res.json({ result: { url } });
   } catch (err) {
+    capture(err);
     console.error('[stripe] /portal failed:', err);
     return sendError(res, err instanceof Error ? err.message : 'failed');
   }
@@ -139,6 +143,7 @@ router.get('/subscription', async (req, res) => {
       }
     });
   } catch (err) {
+    capture(err);
     console.error('[stripe] /subscription failed:', err);
     return sendError(res, err instanceof Error ? err.message : 'failed');
   }

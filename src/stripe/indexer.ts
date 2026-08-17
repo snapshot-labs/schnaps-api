@@ -3,6 +3,7 @@ import {
   BaseProvider,
   BlockNotFoundError
 } from '@snapshot-labs/checkpoint';
+import { capture } from '@snapshot-labs/snapshot-sentry';
 import { stripe } from './client';
 import { STRIPE_EVENTS, WINDOW } from './config';
 import { createStripeWriters, StripeItem, StripeWriter } from './writers';
@@ -99,6 +100,7 @@ class StripeProvider extends BaseProvider {
         try {
           await this.args.writers[fn](item);
         } catch (err) {
+          capture(err);
           console.error(`[stripe] ${fn} failed`, item.id, err);
         }
       }

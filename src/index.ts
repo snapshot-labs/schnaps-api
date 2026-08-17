@@ -1,7 +1,9 @@
 import 'dotenv/config';
+import './instrument';
 import fs from 'fs';
 import path from 'path';
 import Checkpoint, { evm, LogLevel } from '@snapshot-labs/checkpoint';
+import { Sentry } from '@snapshot-labs/snapshot-sentry';
 import cors from 'cors';
 import express from 'express';
 import { createConfig, NETWORK } from './config';
@@ -14,6 +16,12 @@ import stripeRouter from './stripe/routes';
 import { createStripeWriters } from './stripe/writers';
 import { sleep } from './utils';
 import { createEvmWriters } from './writers';
+
+// Node exits on an unhandled rejection by default; Sentry's 'warn' mode does not.
+process.on('unhandledRejection', err => {
+  console.error('Unhandled rejection, exiting:', err);
+  Sentry.flush(2000).finally(() => process.exit(1));
+});
 
 const PRODUCTION_INDEXER_DELAY = 60 * 1000;
 const dir = __dirname.endsWith('dist/src') ? '../' : '';

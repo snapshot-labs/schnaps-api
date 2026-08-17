@@ -1,3 +1,4 @@
+import { capture } from '@snapshot-labs/snapshot-sentry';
 import { Knex } from 'knex';
 
 export interface Space {
@@ -36,6 +37,7 @@ export async function getExpiringSpaces(
       expiring: allSpaces.filter(space => space.expiration >= now)
     };
   } catch (err) {
+    capture(err);
     console.error('Error getting expiring spaces:', err);
     return { expired: [], expiring: [] };
   }
@@ -53,6 +55,7 @@ export async function getLatestIndexedBlock(knex: Knex): Promise<number> {
 
     return result?.value ? parseInt(result.value) : 0;
   } catch (err: any) {
+    capture(err);
     console.error('Error getting latest indexed block:', err);
     return 0;
   }
