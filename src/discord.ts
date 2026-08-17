@@ -5,9 +5,12 @@ import { Payment, Space } from '../.checkpoint/models';
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 const DISCORD_EXPIRATION_WEBHOOK_URL =
   process.env.DISCORD_EXPIRATION_WEBHOOK_URL;
+const DISCORD_ALERT_WEBHOOK_URL =
+  process.env.DISCORD_ALERT_WEBHOOK_URL || DISCORD_EXPIRATION_WEBHOOK_URL;
 const INDEX_TESTNET = process.env.INDEX_TESTNET;
 
 const SNAPSHOT_BASE_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box`;
+const NETWORK_LABEL = INDEX_TESTNET ? 'Sepolia' : 'Ethereum';
 
 type DiscordMessage = {
   content?: string;
@@ -139,6 +142,77 @@ export async function notifyStripeCancellation(
   await postToDiscord({
     content: `🚫 Stripe subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail}${turbo}`
   });
+}
+
+export function hasAlertWebhook(): boolean {
+  return !!DISCORD_ALERT_WEBHOOK_URL;
+}
+
+async function postAlertToDiscord(content: string): Promise<boolean> {
+  if (!DISCORD_ALERT_WEBHOOK_URL) {
+    console.error('Alert undeliverable (no alert webhook set):', content);
+    return false;
+  }
+
+  try {
+    const response = await fetch(DISCORD_ALERT_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    });
+    if (!response.ok)
+      throw new Error(
+        `Discord webhook responded with status ${response.status}`
+      );
+    return true;
+  } catch (err) {
+    console.error('Failed to send indexer alert:', err);
+    return false;
+  }
+}
+
+function describePosition(
+  lastIndexedBlock: number | null,
+  latestBlock: number | null
+): string {
+  if (latestBlock === null) return 'Chain head unavailable.';
+  if (lastIndexedBlock === null) return `Chain head is ${latestBlock}.`;
+  return `Chain head is ${latestBlock}, ${latestBlock - lastIndexedBlock} blocks ahead.`;
+}
+
+export async function sendIndexerStallNotification({
+  lastIndexedBlock,
+  latestBlock,
+  stalledSince,
+  stalled
+}: {
+  lastIndexedBlock: number | null;
+  latestBlock: number | null;
+  stalledSince: number;
+  stalled: boolean;
+}): Promise<boolean> {
+  const since = `<t:${stalledSince}:R> (<t:${stalledSince}:f>)`;
+  let lead: string;
+  if (lastIndexedBlock === null) {
+    lead = `Indexed block has been unreadable since ${since}.`;
+  } else if (stalled) {
+    lead = `Cursor stuck at block ${lastIndexedBlock} since ${since}.`;
+  } else {
+    lead = `Cursor is at block ${lastIndexedBlock} and losing ground.`;
+  }
+
+  return postAlertToDiscord(
+    `🚨 **${NETWORK_LABEL} indexer not keeping up.** ${lead} ${describePosition(lastIndexedBlock, latestBlock)} Onchain payments are not being indexed.`
+  );
+}
+
+export async function sendIndexerRecoveryNotification(
+  lastIndexedBlock: number,
+  latestBlock: number | null
+): Promise<boolean> {
+  return postAlertToDiscord(
+    `✅ **${NETWORK_LABEL} indexer caught up.** Cursor advancing again at block ${lastIndexedBlock}. ${describePosition(lastIndexedBlock, latestBlock)}`
+  );
 }
 
 export async function sendExpirationNotification(
