@@ -1,3 +1,4 @@
+import { capture } from '@snapshot-labs/snapshot-sentry';
 import { GetBlockReturnType } from 'viem';
 import { CategorizedSpaces } from './queries';
 import { Payment, Space } from '../.checkpoint/models';
@@ -185,6 +186,7 @@ export async function sendExpirationNotification(
       } expired, ${expiring.length} expiring)`
     );
   } catch (err) {
+    capture(err);
     console.error('Failed to send expiration notification:', err);
   }
 }

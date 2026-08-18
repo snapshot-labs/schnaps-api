@@ -1,4 +1,5 @@
 import { evm } from '@snapshot-labs/checkpoint';
+import { capture } from '@snapshot-labs/snapshot-sentry';
 import SchnapsAbi from './abis/Schnaps';
 import { TURBO_PRICE_USD } from './config';
 import { notifyPayment } from './discord';
@@ -127,6 +128,7 @@ export function createEvmWriters(indexerName: string) {
     try {
       metadata = await getJSON(barcode);
     } catch (err) {
+      capture(err);
       console.error('Failed to fetch metadata for barcode:', err);
       return;
     }

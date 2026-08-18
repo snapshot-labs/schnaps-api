@@ -59,3 +59,4 @@ Copy `.env.example` to `.env`:
 - `DISCORD_EXPIRATION_WEBHOOK_URL` — expiration monitor notifications.
 - `ADMIN_ADDRESS` — address whose zero-amount payments set expiration directly.
 - `INDEX_TESTNET` — index Sepolia instead of Ethereum.
+- `SENTRY_DSN`: error reporting; omit to disable.
