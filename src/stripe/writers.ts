@@ -25,6 +25,7 @@ type StripeRefund = StripeItem & {
 };
 
 type StripeSubscriptionEvent = StripeItem & {
+  livemode: boolean;
   data: { object: unknown; previous_attributes?: unknown };
 };
 
@@ -122,7 +123,8 @@ async function handleRefund(item: StripeItem): Promise<void> {
     limit: 1
   });
 
-  const invoice = invoicePayments.data[0]?.invoice;
+  const invoicePayment = invoicePayments.data[0];
+  const invoice = invoicePayment?.invoice;
   const invoiceId = typeof invoice === 'string' ? invoice : invoice?.id;
   if (!invoiceId) return;
 
@@ -149,7 +151,12 @@ async function handleRefund(item: StripeItem): Promise<void> {
     await spaceEntity.save();
   }
 
-  notifyStripeRefund(space, refund.created, refundAmountDecimal);
+  notifyStripeRefund(
+    space,
+    refund.created,
+    refundAmountDecimal,
+    invoicePayment.livemode
+  );
 }
 
 async function handleSubscriptionUpdated(item: StripeItem): Promise<void> {
@@ -168,6 +175,7 @@ async function handleSubscriptionUpdated(item: StripeItem): Promise<void> {
   notifyStripeCancellation(
     space,
     event.created,
+    event.livemode,
     subscription.cancellation_details?.feedback,
     subscription.cancel_at
   );
@@ -187,5 +195,10 @@ async function handleSubscriptionDeleted(item: StripeItem): Promise<void> {
   const reason =
     details?.reason === 'cancellation_requested' ? null : details?.reason;
 
-  notifyStripeCancellation(space, event.created, details?.feedback ?? reason);
+  notifyStripeCancellation(
+    space,
+    event.created,
+    event.livemode,
+    details?.feedback ?? reason
+  );
 }

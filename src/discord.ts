@@ -28,6 +28,9 @@ async function postToDiscord(body: DiscordMessage): Promise<void> {
 const isRecent = (timestamp: number) =>
   timestamp >= ~~(Date.now() / 1e3) - 2 * 60 * 60; // within the last 2 hours (> the 1h Stripe window)
 
+const stripeSource = (livemode: boolean) =>
+  livemode ? 'Stripe' : 'Stripe (test mode)';
+
 export async function notifyPayment(
   payment: Payment,
   space: Space,
@@ -42,7 +45,7 @@ export async function notifyPayment(
   await postToDiscord({
     embeds: [
       {
-        title: `💰 New payment of ${payment.amount_decimal} ${payment.token_symbol}`,
+        title: `${INDEX_TESTNET ? '🧪 Test' : '💰 New'} payment of ${payment.amount_decimal} ${payment.token_symbol}`,
         url: `${explorerBaseUrl}/tx/${txHash}`,
         author: {
           name: payment.sender,
@@ -87,7 +90,7 @@ export async function notifyStripePayment(
   await postToDiscord({
     embeds: [
       {
-        title: `💳 New payment of ${payment.amount_decimal} ${payment.token_symbol}`,
+        title: `${INDEX_TESTNET || !livemode ? '🧪 Test' : '💳 New'} payment of ${payment.amount_decimal} ${payment.token_symbol}`,
         url: dashboardUrl,
         fields: [
           {
@@ -97,7 +100,7 @@ export async function notifyStripePayment(
           },
           {
             name: 'Source',
-            value: 'Stripe',
+            value: stripeSource(livemode),
             inline: true
           },
           {
@@ -115,18 +118,20 @@ export async function notifyStripePayment(
 export async function notifyStripeRefund(
   space: string,
   timestamp: number,
-  amount: string
+  amount: string,
+  livemode: boolean
 ): Promise<void> {
   if (!isRecent(timestamp)) return;
 
   await postToDiscord({
-    content: `↩️ Stripe payment refunded ($${amount}) for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing) — turbo reduced.`
+    content: `↩️ ${stripeSource(livemode)} payment refunded ($${amount}) for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing) — turbo reduced.`
   });
 }
 
 export async function notifyStripeCancellation(
   space: string,
   timestamp: number,
+  livemode: boolean,
   reason?: string | null,
   turboExpiration?: number | null
 ): Promise<void> {
@@ -138,7 +143,7 @@ export async function notifyStripeCancellation(
       ? ` — turbo runs until ${new Date(turboExpiration * 1000).toDateString()}`
       : '';
   await postToDiscord({
-    content: `🚫 Stripe subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail}${turbo}`
+    content: `🚫 ${stripeSource(livemode)} subscription canceled for [${space}](${SNAPSHOT_BASE_URL}/#/${space}/settings/billing)${detail}${turbo}`
   });
 }
 
