@@ -31,6 +31,31 @@ const isRecent = (timestamp: number) =>
 const stripeSource = (livemode: boolean) =>
   livemode ? 'Stripe' : 'Stripe (test mode)';
 
+const PAYMENT_TITLES = {
+  live: {
+    evm: { emoji: '💰', label: 'New payment' },
+    stripe: { emoji: '💳', label: 'New payment' },
+    renewal: { emoji: '🔄', label: 'Renewal payment' }
+  },
+  test: {
+    evm: { emoji: '🧪', label: 'Test payment' },
+    stripe: { emoji: '🧪', label: 'Test payment' },
+    renewal: { emoji: '🧪', label: 'Test renewal' }
+  }
+};
+
+type StripePaymentContext = { livemode: boolean; isRenewal: boolean };
+
+const paymentTitle = (
+  payment: Payment,
+  source: 'evm' | 'stripe',
+  { livemode = true, isRenewal = false }: Partial<StripePaymentContext> = {}
+) => {
+  const mode = INDEX_TESTNET || !livemode ? 'test' : 'live';
+  const { emoji, label } = PAYMENT_TITLES[mode][isRenewal ? 'renewal' : source];
+  return `${emoji} ${label} of ${payment.amount_decimal} ${payment.token_symbol}`;
+};
+
 export async function notifyPayment(
   payment: Payment,
   space: Space,
@@ -45,7 +70,7 @@ export async function notifyPayment(
   await postToDiscord({
     embeds: [
       {
-        title: `${INDEX_TESTNET ? '🧪 Test' : '💰 New'} payment of ${payment.amount_decimal} ${payment.token_symbol}`,
+        title: paymentTitle(payment, 'evm'),
         url: `${explorerBaseUrl}/tx/${txHash}`,
         author: {
           name: payment.sender,
@@ -78,7 +103,7 @@ export async function notifyPayment(
 export async function notifyStripePayment(
   payment: Payment,
   space: Space,
-  livemode: boolean
+  { livemode, isRenewal }: StripePaymentContext
 ): Promise<void> {
   if (!isRecent(payment.timestamp)) return;
 
@@ -90,7 +115,7 @@ export async function notifyStripePayment(
   await postToDiscord({
     embeds: [
       {
-        title: `${INDEX_TESTNET || !livemode ? '🧪 Test' : '💳 New'} payment of ${payment.amount_decimal} ${payment.token_symbol}`,
+        title: paymentTitle(payment, 'stripe', { livemode, isRenewal }),
         url: dashboardUrl,
         fields: [
           {

@@ -108,7 +108,10 @@ async function handleCharge(item: StripeItem): Promise<void> {
   spaceEntity.turbo_expiration_date = expirationDate.toDateString();
   await spaceEntity.save();
 
-  notifyStripePayment(payment, spaceEntity, invoice.livemode);
+  notifyStripePayment(payment, spaceEntity, {
+    livemode: invoice.livemode,
+    isRenewal: invoice.billing_reason === 'subscription_cycle'
+  });
 }
 
 async function handleRefund(item: StripeItem): Promise<void> {
