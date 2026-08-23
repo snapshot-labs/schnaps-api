@@ -33,14 +33,14 @@ const stripeSource = (livemode: boolean) =>
 
 const PAYMENT_TITLES = {
   live: {
-    evm: { emoji: '💰', label: 'New payment' },
-    stripe: { emoji: '💳', label: 'New payment' },
-    renewal: { emoji: '🔄', label: 'Renewal payment' }
+    evm: '💰 New payment',
+    stripe: '💳 New payment',
+    renewal: '🔄 Renewal payment'
   },
   test: {
-    evm: { emoji: '🧪', label: 'Test payment' },
-    stripe: { emoji: '🧪', label: 'Test payment' },
-    renewal: { emoji: '🧪', label: 'Test renewal' }
+    evm: '🧪 Test payment',
+    stripe: '🧪 Test payment',
+    renewal: '🧪 Test renewal'
   }
 };
 
@@ -48,12 +48,11 @@ type StripePaymentContext = { livemode: boolean; isRenewal: boolean };
 
 const paymentTitle = (
   payment: Payment,
-  source: 'evm' | 'stripe',
-  { livemode = true, isRenewal = false }: Partial<StripePaymentContext> = {}
+  kind: 'evm' | 'stripe' | 'renewal',
+  livemode = true
 ) => {
   const mode = INDEX_TESTNET || !livemode ? 'test' : 'live';
-  const { emoji, label } = PAYMENT_TITLES[mode][isRenewal ? 'renewal' : source];
-  return `${emoji} ${label} of ${payment.amount_decimal} ${payment.token_symbol}`;
+  return `${PAYMENT_TITLES[mode][kind]} of ${payment.amount_decimal} ${payment.token_symbol}`;
 };
 
 export async function notifyPayment(
@@ -115,7 +114,11 @@ export async function notifyStripePayment(
   await postToDiscord({
     embeds: [
       {
-        title: paymentTitle(payment, 'stripe', { livemode, isRenewal }),
+        title: paymentTitle(
+          payment,
+          isRenewal ? 'renewal' : 'stripe',
+          livemode
+        ),
         url: dashboardUrl,
         fields: [
           {
