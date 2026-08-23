@@ -96,10 +96,10 @@ async function handleCharge(item: StripeItem): Promise<void> {
   if (typeof ref === 'string' && ref) payment.ref = ref;
   await payment.save();
 
-  let spaceEntity = await Space.loadEntity(space, NETWORK);
+  const existingSpace = await Space.loadEntity(space, NETWORK);
   const isRenewal =
-    invoice.billing_reason === 'subscription_cycle' && spaceEntity !== null;
-  if (!spaceEntity) spaceEntity = new Space(space, NETWORK);
+    invoice.billing_reason === 'subscription_cycle' && existingSpace !== null;
+  const spaceEntity = existingSpace ?? new Space(space, NETWORK);
 
   const expirationDate = computeExpirationFromAmount(
     amountRaw,

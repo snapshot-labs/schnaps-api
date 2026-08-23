@@ -31,7 +31,10 @@ const isRecent = (timestamp: number) =>
 const stripeSource = (livemode: boolean) =>
   livemode ? 'Stripe' : 'Stripe (test mode)';
 
-const PAYMENT_TITLES = {
+const PAYMENT_TITLES: Record<
+  'live' | 'test',
+  Record<'evm' | 'stripe' | 'renewal', string>
+> = {
   live: {
     evm: '💰 New payment',
     stripe: '💳 New payment',
