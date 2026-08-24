@@ -31,10 +31,9 @@ const isRecent = (timestamp: number) =>
 const stripeSource = (livemode: boolean) =>
   livemode ? 'Stripe' : 'Stripe (test mode)';
 
-const PAYMENT_TITLES: Record<
-  'live' | 'test',
-  Record<'evm' | 'stripe' | 'renewal', string>
-> = {
+type PaymentKind = 'evm' | 'stripe' | 'renewal';
+
+const PAYMENT_TITLES: Record<'live' | 'test', Record<PaymentKind, string>> = {
   live: {
     evm: '💰 New payment',
     stripe: '💳 New payment',
@@ -49,11 +48,7 @@ const PAYMENT_TITLES: Record<
 
 type StripePaymentContext = { livemode: boolean; isRenewal: boolean };
 
-const paymentTitle = (
-  payment: Payment,
-  kind: 'evm' | 'stripe' | 'renewal',
-  livemode = true
-) => {
+const paymentTitle = (payment: Payment, kind: PaymentKind, livemode = true) => {
   const mode = INDEX_TESTNET || !livemode ? 'test' : 'live';
   return `${PAYMENT_TITLES[mode][kind]} of ${payment.amount_decimal} ${payment.token_symbol}`;
 };
