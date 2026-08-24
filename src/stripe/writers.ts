@@ -96,8 +96,10 @@ async function handleCharge(item: StripeItem): Promise<void> {
   if (typeof ref === 'string' && ref) payment.ref = ref;
   await payment.save();
 
-  let spaceEntity = await Space.loadEntity(space, NETWORK);
-  if (!spaceEntity) spaceEntity = new Space(space, NETWORK);
+  const existingSpace = await Space.loadEntity(space, NETWORK);
+  const isRenewal =
+    invoice.billing_reason === 'subscription_cycle' && existingSpace !== null;
+  const spaceEntity = existingSpace ?? new Space(space, NETWORK);
 
   const expirationDate = computeExpirationFromAmount(
     amountRaw,
@@ -108,7 +110,10 @@ async function handleCharge(item: StripeItem): Promise<void> {
   spaceEntity.turbo_expiration_date = expirationDate.toDateString();
   await spaceEntity.save();
 
-  notifyStripePayment(payment, spaceEntity, invoice.livemode);
+  notifyStripePayment(payment, spaceEntity, {
+    livemode: invoice.livemode,
+    isRenewal
+  });
 }
 
 async function handleRefund(item: StripeItem): Promise<void> {
