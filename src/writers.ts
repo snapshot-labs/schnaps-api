@@ -1,7 +1,7 @@
 import { evm } from '@snapshot-labs/checkpoint';
 import { capture } from '@snapshot-labs/snapshot-sentry';
 import SchnapsAbi from './abis/Schnaps';
-import { TURBO_PRICE_USD } from './config';
+import { turboPriceUsd } from './config';
 import { notifyPayment } from './discord';
 import tokens from './payment_tokens.json';
 import { getJSON } from './utils';
@@ -10,16 +10,11 @@ import { Payment, Space } from '../.checkpoint/models';
 const MILLISECONDS = 1000;
 const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
 
-const TURBO_MONTHLY_PRICE = TURBO_PRICE_USD.monthly * DECIMALS;
-const TURBO_YEARLY_PRICE = TURBO_PRICE_USD.yearly * DECIMALS;
-
 const DAYS_PER_YEAR = (365 * 3 + 366) / 4; // Accounting for leap years, which happens even four year (this is technically incorrect due to leap seconds but it's good enough for this purpose)
-const YEARLY_PRICE_PER_DAY = TURBO_YEARLY_PRICE / DAYS_PER_YEAR;
-const YEARLY_PRICE_PER_SECOND = YEARLY_PRICE_PER_DAY / (24 * 60 * 60); // 24 hours * 60 minutes * 60 seconds
+const SECONDS_PER_YEAR = DAYS_PER_YEAR * 24 * 60 * 60; // 24 hours * 60 minutes * 60 seconds
 
 const DAYS_PER_MONTH = (365 * 3 + 366) / 48; // Accounting for leap years, which happens even four year (this is technically incorrect due to leap seconds but it's good enough for this purpose)
-const MONTHLY_PRICE_PER_DAY = TURBO_MONTHLY_PRICE / DAYS_PER_MONTH;
-const MONTHLY_PRICE_PER_SECOND = MONTHLY_PRICE_PER_DAY / (24 * 60 * 60); // 24 hours * 60 minutes * 60 seconds
+const SECONDS_PER_MONTH = DAYS_PER_MONTH * 24 * 60 * 60; // 24 hours * 60 minutes * 60 seconds
 
 const ADMIN_ADDRESS = (
   process.env.ADMIN_ADDRESS || '0x8C28Cf33d9Fd3D0293f963b1cd27e3FF422B425c'
@@ -40,14 +35,21 @@ function getTokenSymbol(tokenAddress: string, chain: string) {
 // indexer call this with primitives.
 // - Returns the current expiration unchanged if the amount is below one month
 // - If the user has paid for more than a year, extends by the number of years paid
-//   plus a per-second surplus at YEARLY_PRICE_PER_SECOND
+//   plus a per-second surplus at the yearly rate
 // - Otherwise extends by the number of months paid plus a per-second surplus
-//   at MONTHLY_PRICE_PER_SECOND
+//   at the monthly rate
+// Prices are those in effect at `timestamp` (the payment time).
 export function computeExpirationFromAmount(
   amountRaw: bigint,
   currentExpiration: number,
   timestamp: number
 ): Date {
+  const price = turboPriceUsd(timestamp);
+  const TURBO_MONTHLY_PRICE = price.monthly * DECIMALS;
+  const TURBO_YEARLY_PRICE = price.yearly * DECIMALS;
+  const YEARLY_PRICE_PER_SECOND = TURBO_YEARLY_PRICE / SECONDS_PER_YEAR;
+  const MONTHLY_PRICE_PER_SECOND = TURBO_MONTHLY_PRICE / SECONDS_PER_MONTH;
+
   if (amountRaw < TURBO_MONTHLY_PRICE) {
     if (currentExpiration) {
       return new Date(currentExpiration * MILLISECONDS);
@@ -75,6 +77,18 @@ export function computeExpirationFromAmount(
   }
 
   return expirationDate;
+}
+
+// Seconds of turbo that `amountRaw` bought at `timestamp`; 0 below one month.
+export function computeDurationFromAmount(
+  amountRaw: bigint,
+  timestamp: number
+): number {
+  return (
+    computeExpirationFromAmount(amountRaw, timestamp, timestamp).getTime() /
+      MILLISECONDS -
+    timestamp
+  );
 }
 
 function computeExpiration(

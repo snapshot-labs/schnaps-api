@@ -1,6 +1,6 @@
 import { capture } from '@snapshot-labs/snapshot-sentry';
 import express, { Router } from 'express';
-import { PLANS, TURBO_PRICE_CENTS } from '../config';
+import { PLANS, turboPriceUsd } from '../config';
 import { sendError } from '../utils';
 import { stripe } from './client';
 
@@ -79,7 +79,8 @@ router.post('/create', express.json(), async (req, res) => {
           price_data: {
             currency: 'usd',
             product_data: { name: `Snapshot Pro (${space})` },
-            unit_amount: TURBO_PRICE_CENTS[plan],
+            unit_amount:
+              turboPriceUsd(Math.floor(Date.now() / 1000))[plan] * 100,
             recurring: { interval: plan === 'yearly' ? 'year' : 'month' }
           },
           quantity: 1

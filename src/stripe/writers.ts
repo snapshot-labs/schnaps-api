@@ -5,7 +5,10 @@ import {
   notifyStripePayment,
   notifyStripeRefund
 } from '../discord';
-import { computeExpirationFromAmount } from '../writers';
+import {
+  computeDurationFromAmount,
+  computeExpirationFromAmount
+} from '../writers';
 import { stripe } from './client';
 
 const CENTS_TO_RAW = 10000n; // USD cents → 6-decimal token raw (10^6 / 10^2)
@@ -146,8 +149,11 @@ async function handleRefund(item: StripeItem): Promise<void> {
 
   const spaceEntity = await Space.loadEntity(space, NETWORK);
   if (spaceEntity) {
-    const reductionSeconds =
-      computeExpirationFromAmount(refundAmountRaw, 0, 0).getTime() / 1000;
+    // Price the refund at the original payment's time, not the refund's.
+    const reductionSeconds = computeDurationFromAmount(
+      refundAmountRaw,
+      payment.timestamp
+    );
     const expiration = spaceEntity.turbo_expiration - reductionSeconds;
     spaceEntity.turbo_expiration = expiration;
     spaceEntity.turbo_expiration_date = new Date(
