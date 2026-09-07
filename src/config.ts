@@ -21,22 +21,12 @@ export type Plan = (typeof PLANS)[number];
 
 // The DB is replayed from genesis on every boot, so the price must be keyed by
 // payment time: a plain constant swap would recompute every past payment.
-export const TURBO_PRICE_CUTOVER_TS = 1790812800; // 2026-10-01T00:00:00Z
-
-const TURBO_PRICE_USD_BEFORE: Record<Plan, number> = {
-  monthly: 600,
-  yearly: 6000
-};
-
-const TURBO_PRICE_USD_AFTER: Record<Plan, number> = {
-  monthly: 400,
-  yearly: 4000
-};
+const TURBO_PRICE_CUTOVER_TS = 1790812800; // 2026-10-01T00:00:00Z
 
 export function turboPriceUsd(timestamp: number): Record<Plan, number> {
   return timestamp >= TURBO_PRICE_CUTOVER_TS
-    ? TURBO_PRICE_USD_AFTER
-    : TURBO_PRICE_USD_BEFORE;
+    ? { monthly: 400, yearly: 4000 }
+    : { monthly: 600, yearly: 6000 };
 }
 
 export function createConfig(

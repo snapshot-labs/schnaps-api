@@ -79,8 +79,7 @@ router.post('/create', express.json(), async (req, res) => {
           price_data: {
             currency: 'usd',
             product_data: { name: `Snapshot Pro (${space})` },
-            unit_amount:
-              turboPriceUsd(Math.floor(Date.now() / 1000))[plan] * 100,
+            unit_amount: turboPriceUsd(~~(Date.now() / 1e3))[plan] * 100,
             recurring: { interval: plan === 'yearly' ? 'year' : 'month' }
           },
           quantity: 1
