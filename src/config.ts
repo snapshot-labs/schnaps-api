@@ -23,7 +23,9 @@ export type Plan = (typeof PLANS)[number];
 // payment time: a plain constant swap would recompute every past payment.
 const TURBO_PRICE_CUTOVER_TS = 1790812800; // 2026-10-01T00:00:00Z
 
-export function turboPriceUsd(timestamp: number): Record<Plan, number> {
+export function turboPriceUsd(
+  timestamp = ~~(Date.now() / 1e3)
+): Record<Plan, number> {
   return timestamp >= TURBO_PRICE_CUTOVER_TS
     ? { monthly: 400, yearly: 4000 }
     : { monthly: 600, yearly: 6000 };
