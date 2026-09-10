@@ -43,7 +43,9 @@ export async function getExpiringSpaces(
   }
 }
 
-export async function getLatestIndexedBlock(knex: Knex): Promise<number> {
+export async function getLatestIndexedBlock(
+  knex: Knex
+): Promise<number | null> {
   try {
     const indexerName = process.env.INDEX_TESTNET ? 'sep' : 'eth';
     const result = await knex('_metadatas')
@@ -57,6 +59,6 @@ export async function getLatestIndexedBlock(knex: Knex): Promise<number> {
   } catch (err: any) {
     capture(err);
     console.error('Error getting latest indexed block:', err);
-    return 0;
+    return null;
   }
 }

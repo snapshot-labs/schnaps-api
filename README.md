@@ -29,7 +29,23 @@ per matching event.
   cancellation only notifies (the paid period stands).
 
 Payments and expirations are announced to Discord. A background monitor
-(`src/expirationMonitor.ts`) posts spaces that are expiring or recently expired.
+(`src/expirationMonitor.ts`) runs every 5 minutes. It posts spaces that are
+expiring or recently expired (at most once a day), and it alerts on the EVM
+indexer falling behind, in either of two ways: the indexed block has not
+increased for 15 minutes, or it has been more than `SYNC_THRESHOLD_BLOCKS`
+behind the chain head for 30 minutes. The first catches a hard stop, the second
+catches a crawl. Neither reads the chain head as part of deciding a stall, so a
+dead RPC endpoint cannot switch the alerting off.
+
+Both windows have to stay clear of a boot replay, which resets the cursor to 0
+and re-indexes from `sources[].start`. That replay strides between blocks
+carrying a matching log rather than walking every block, so its duration and its
+longest pause depend on `start` and on how sparse `PaymentReceived` is. Moving
+`start` much further back is the change that would need these windows revisited.
+
+The monitor runs inside the process it watches, so it cannot report that process
+exiting, being OOM-killed, or failing to boot. That needs an external check and
+there is none yet.
 
 ## HTTP endpoints
 
@@ -57,6 +73,8 @@ Copy `.env.example` to `.env`:
 - `STRIPE_SECRET_KEY` — enables the Stripe indexer and endpoints; omit to disable.
 - `DISCORD_WEBHOOK_URL` — payment notifications.
 - `DISCORD_EXPIRATION_WEBHOOK_URL` — expiration monitor notifications.
+- `DISCORD_ALERT_WEBHOOK_URL`: indexer stall alerts. Falls back to
+  `DISCORD_EXPIRATION_WEBHOOK_URL`.
 - `ADMIN_ADDRESS` — address whose zero-amount payments set expiration directly.
 - `INDEX_TESTNET` — index Sepolia instead of Ethereum.
 - `SENTRY_DSN`: error reporting; omit to disable.
