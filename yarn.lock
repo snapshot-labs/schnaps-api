@@ -462,10 +462,10 @@
     "@sentry/core" "10.70.0"
     meriyah "^6.1.4"
 
-"@snapshot-labs/checkpoint@0.1.0-beta.74":
-  version "0.1.0-beta.74"
-  resolved "https://registry.yarnpkg.com/@snapshot-labs/checkpoint/-/checkpoint-0.1.0-beta.74.tgz#3c4cf21ce7bbab6db54749467463999e6977f81f"
-  integrity sha512-M9lAfNb2HLBhg7XJ6ylfvxS03sNPCclFsR6gi60PdSeNmq6J3DN9M9tyGk2YjZyBjDjznE+bjBE4ousGRraXtA==
+"@snapshot-labs/checkpoint@0.1.0-beta.80":
+  version "0.1.0-beta.80"
+  resolved "https://registry.yarnpkg.com/@snapshot-labs/checkpoint/-/checkpoint-0.1.0-beta.80.tgz#c7f71a68aa9d59fa0da8d2164a763b712067ef92"
+  integrity sha512-6wNdosiJNLN82JXfdAG6HMtu7Wz3crI4ZDz7cgYvd8LNx7LY8hSRL7YYWvm40vPnpsKG/DtP8wc9p+kY7TlDDw==
   dependencies:
     "@graphql-tools/schema" "^8.5.1"
     "@starknet-io/types-js" "^0.9.2"
@@ -473,7 +473,6 @@
     dataloader "^2.1.0"
     express-graphql "^0.12.0"
     graphql "^16.5.0"
-    graphql-fields "^2.0.3"
     graphql-parse-resolve-info "^4.14.1"
     json-to-graphql-query "^2.2.4"
     knex "^3.1.0"
@@ -503,10 +502,10 @@
   resolved "https://registry.yarnpkg.com/@snapshot-labs/prettier-config/-/prettier-config-0.1.0.tgz#f0eafa4a3aed6a7fabaf88c016659f3343041071"
   integrity sha512-8MYAHuewlAdJs55f94qQtEs/WLFmjgYfuIVb1iJPa9gUZauHEXMzbVpKZfnkQsgpwwcXxq9hzg0S/OeOkgj3+w==
 
-"@snapshot-labs/snapshot-sentry@^3.1.0":
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/@snapshot-labs/snapshot-sentry/-/snapshot-sentry-3.1.0.tgz#9e9c306ea6e32025d6c902fbe45e7e882dbde2a3"
-  integrity sha512-MIIQyW0GZisXa93JvDWFdMO0Ycu9JXBH0P3ca0qJ7HhbxfNrzqLOr1dzhKdhXT0e+sTWO7UCxdeQTGF3dV0l7w==
+"@snapshot-labs/snapshot-sentry@^4.0.0":
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/@snapshot-labs/snapshot-sentry/-/snapshot-sentry-4.0.0.tgz#754103b76802add0d7972e1a9ec1ea15686bf32e"
+  integrity sha512-g9yAJQj+55Iu42yVl+dOtOg1e0K9KoFAxV0o8FQL2X2x3N2+FpyUKmrMBzdwhlDW12iyQ4CqpvCx25l6l1fmpg==
   dependencies:
     "@sentry/node" "^10.52.0"
 
@@ -1549,11 +1548,6 @@ graceful-fs@^4.1.6, graceful-fs@^4.2.0:
   version "4.2.11"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
-
-graphql-fields@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/graphql-fields/-/graphql-fields-2.0.3.tgz#5e68dff7afbb202be4f4f40623e983b22c96ab8f"
-  integrity sha512-x3VE5lUcR4XCOxPIqaO4CE+bTK8u6gVouOdpQX9+EKHr+scqtK5Pp/l8nIGqIpN1TUlkKE6jDCCycm/WtLRAwA==
 
 graphql-parse-resolve-info@^4.14.1:
   version "4.14.1"
