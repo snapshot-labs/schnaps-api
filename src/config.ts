@@ -19,15 +19,17 @@ export const NETWORK = process.env.INDEX_TESTNET ? 'sep' : 'eth';
 export const PLANS = ['monthly', 'yearly'] as const;
 export type Plan = (typeof PLANS)[number];
 
-export const TURBO_PRICE_USD: Record<Plan, number> = {
-  monthly: 600,
-  yearly: 6000
-};
+// The DB is replayed from genesis on every boot, so the price must be keyed by
+// payment time: a plain constant swap would recompute every past payment.
+const TURBO_PRICE_CUTOVER_TS = 1790812800; // 2026-10-01T00:00:00Z
 
-export const TURBO_PRICE_CENTS: Record<Plan, number> = {
-  monthly: TURBO_PRICE_USD.monthly * 100,
-  yearly: TURBO_PRICE_USD.yearly * 100
-};
+export function turboPriceUsd(
+  timestamp = ~~(Date.now() / 1e3)
+): Record<Plan, number> {
+  return timestamp >= TURBO_PRICE_CUTOVER_TS
+    ? { monthly: 400, yearly: 4000 }
+    : { monthly: 600, yearly: 6000 };
+}
 
 export function createConfig(
   indexerName: keyof typeof CONFIG
