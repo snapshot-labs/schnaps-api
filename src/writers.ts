@@ -6,7 +6,6 @@ import SchnapsAbi from './abis/Schnaps';
 import { TURBO_PRICE_USD } from './config';
 import { notifyPayment } from './discord';
 import tokens from './payment_tokens.json';
-import { STRIPE_INDEXER } from './stripe/config';
 import { getJSON } from './utils';
 import { Payment, Space } from '../.checkpoint/models';
 
@@ -117,7 +116,7 @@ export function computeExpirationFromAmount(
 }
 
 function computeExpiration(
-  currentExpiration: number,
+  space: Space,
   payment: Payment,
   metadata: any,
   blockTimestamp: number
@@ -133,7 +132,7 @@ function computeExpiration(
 
   return computeExpirationFromAmount(
     payment.amount_raw,
-    currentExpiration,
+    space.turbo_expiration,
     blockTimestamp
   );
 }
@@ -213,14 +212,9 @@ export function createEvmWriters(indexerName: string) {
         new Space(spaceId, indexerName);
 
       if (metadata) {
-        // A space paying both ways extends from the later of its two expirations
-        const stripeSpace = await Space.loadEntity(spaceId, STRIPE_INDEXER);
         const seconds =
           computeExpiration(
-            Math.max(
-              space.turbo_expiration,
-              stripeSpace?.turbo_expiration ?? 0
-            ),
+            space,
             payment,
             metadata,
             Number(block.timestamp)
