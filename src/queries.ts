@@ -19,11 +19,16 @@ export async function getExpiringSpaces(
     const sevenDays = 7 * 24 * 60 * 60;
     const thirtyDays = 30 * 24 * 60 * 60;
 
+    // A space has one current row per payment source (onchain, Stripe)
     const spaces = await knex('spaces')
-      .select('id', 'turbo_expiration')
-      .whereBetween('turbo_expiration', [now - thirtyDays, now + sevenDays])
-      .distinctOn('id')
-      .orderByRaw('id, upper_inf(block_range) DESC, upper(block_range) DESC');
+      .select('id')
+      .max('turbo_expiration as turbo_expiration')
+      .whereRaw('upper_inf(block_range)')
+      .groupBy('id')
+      .havingRaw('max(turbo_expiration) between ? and ?', [
+        now - thirtyDays,
+        now + sevenDays
+      ]);
 
     const allSpaces: Space[] = spaces
       .map(space => ({

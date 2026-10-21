@@ -11,7 +11,7 @@ import { createConfig, NETWORK } from './config';
 import { startExpirationMonitor } from './expirationMonitor';
 import overrides from './overrides.json';
 import { stripe } from './stripe/client';
-import { stripeConfig } from './stripe/config';
+import { STRIPE_INDEXER, stripeConfig } from './stripe/config';
 import { StripeIndexer } from './stripe/indexer';
 import stripeRouter from './stripe/routes';
 import { createStripeWriters } from './stripe/writers';
@@ -70,7 +70,7 @@ checkpoint.addIndexer(NETWORK, config, indexer);
 
 if (stripe) {
   checkpoint.addIndexer(
-    'stripe',
+    STRIPE_INDEXER,
     stripeConfig,
     new StripeIndexer(createStripeWriters())
   );
