@@ -10,7 +10,8 @@ import { getJSON } from './utils';
 import { Payment, Space } from '../.checkpoint/models';
 
 const MILLISECONDS = 1000;
-const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
+const DECIMALS_COUNT = 6; // USDC and USDT both have 6 decimals
+const DECIMALS = 10 ** DECIMALS_COUNT;
 
 const TURBO_MONTHLY_PRICE = TURBO_PRICE_USD.monthly * DECIMALS;
 const TURBO_YEARLY_PRICE = TURBO_PRICE_USD.yearly * DECIMALS;
@@ -165,55 +166,32 @@ export function createEvmWriters(indexerName: string) {
 
     try {
       const creditsSpace = parseCreditsBarcode(barcode, spacePrefix);
+      let spaceId: string, tokenSymbol: string, decimals: number;
+      let metadata: any = null;
+
       if (creditsSpace) {
         if (tokenAddress !== NATIVE_TOKEN || amountRaw < MIN_CREDITS_WEI) {
           return skip(txId, 'invalid credits payment');
         }
-
-        const space =
-          (await Space.loadEntity(creditsSpace, indexerName)) ??
-          new Space(creditsSpace, indexerName);
-        // Loaded int8 values come back as strings, new entities start at 0
-        space.credits = BigInt(space.credits) + amountRaw / 1_000_000_000n; // gwei
-
-        const payment = new Payment(txId, indexerName);
-        payment.sender = sender;
-        payment.token_address = tokenAddress;
-        payment.token_symbol = 'ETH';
-        payment.amount_raw = amountRaw;
-        payment.amount_decimal = formatUnits(amountRaw, 18);
-        payment.barcode = barcode;
-        payment.block = Number(block.number);
-        payment.timestamp = Number(block.timestamp);
-        payment.type = 'credits';
-        payment.space = creditsSpace;
-
-        await payment.save();
-        await space.save();
-        notifyPayment(payment, space, block, txId).catch(capture);
-        return;
+        [spaceId, tokenSymbol, decimals] = [creditsSpace, 'ETH', 18];
+      } else {
+        // Pro only accepts allowlisted stablecoins and content-addressed
+        // barcodes, both checked before the metadata fetch
+        tokenSymbol = getTokenSymbol(tokenAddress, indexerName);
+        if (!tokenSymbol || !CID_REGEX.test(barcode)) {
+          return skip(txId, 'not a Pro payment');
+        }
+        metadata = await getJSON(barcode).catch(err => {
+          capture(err);
+          return null;
+        });
+        if (metadata?.type !== 'turbo' || !isText(metadata.params?.space)) {
+          return skip(txId, 'invalid metadata');
+        }
+        spaceId =
+          MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
+        decimals = DECIMALS_COUNT;
       }
-
-      // Pro only accepts allowlisted stablecoins and content-addressed
-      // barcodes, both checked before the metadata fetch
-      const tokenSymbol = getTokenSymbol(tokenAddress, indexerName);
-      if (!tokenSymbol) return skip(txId, 'token not accepted');
-      if (!CID_REGEX.test(barcode)) return skip(txId, 'barcode not accepted');
-
-      let metadata;
-      try {
-        metadata = await getJSON(barcode);
-      } catch (err) {
-        capture(err);
-        console.error('Failed to fetch metadata for barcode:', err);
-        return;
-      }
-      if (metadata?.type !== 'turbo' || !isText(metadata.params?.space)) {
-        return skip(txId, 'invalid metadata');
-      }
-
-      const spaceId =
-        MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
       console.log('Payment received for space', spaceId);
 
       const payment = new Payment(txId, indexerName);
@@ -221,34 +199,37 @@ export function createEvmWriters(indexerName: string) {
       payment.token_address = tokenAddress;
       payment.token_symbol = tokenSymbol;
       payment.amount_raw = amountRaw;
-      payment.amount_decimal = (Number(amountRaw) / DECIMALS).toString();
+      payment.amount_decimal = formatUnits(amountRaw, decimals);
       payment.barcode = barcode;
       payment.block = Number(block.number);
       payment.timestamp = Number(block.timestamp);
-      payment.type = 'turbo';
+      payment.type = metadata ? 'turbo' : 'credits';
       payment.space = spaceId;
-      if (isText(metadata.ref)) payment.ref = metadata.ref;
+      if (isText(metadata?.ref)) payment.ref = metadata.ref;
 
       const space =
         (await Space.loadEntity(spaceId, indexerName)) ??
         new Space(spaceId, indexerName);
 
-      const expirationDate = computeExpiration(
-        space,
-        payment,
-        metadata,
-        Number(block.timestamp)
-      );
-      let expiration = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
-      if (!Number.isFinite(expiration) || expiration > MAX_INT32) {
-        capture(new Error(`Expiration out of range for payment ${txId}`));
-        expiration = MAX_INT32;
+      if (metadata) {
+        const seconds =
+          computeExpiration(
+            space,
+            payment,
+            metadata,
+            Number(block.timestamp)
+          ).getTime() / MILLISECONDS;
+        // Clamped to the 32-bit column instead of failing the write
+        space.turbo_expiration = Number.isFinite(seconds)
+          ? Math.min(seconds, MAX_INT32)
+          : MAX_INT32;
+        space.turbo_expiration_date = new Date(
+          space.turbo_expiration * MILLISECONDS
+        ).toDateString();
+      } else {
+        // Loaded int8 values come back as strings, new entities start at 0
+        space.credits = BigInt(space.credits) + amountRaw / 1_000_000_000n; // gwei
       }
-
-      space.turbo_expiration = expiration;
-      space.turbo_expiration_date = new Date(
-        expiration * MILLISECONDS
-      ).toDateString();
 
       await payment.save();
       await space.save();
