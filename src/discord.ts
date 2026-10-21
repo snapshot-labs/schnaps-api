@@ -1,5 +1,5 @@
 import { capture } from '@snapshot-labs/snapshot-sentry';
-import { GetBlockReturnType } from 'viem';
+import { formatUnits, GetBlockReturnType } from 'viem';
 import { CategorizedSpaces } from './queries';
 import { Payment, Space } from '../.checkpoint/models';
 
@@ -85,11 +85,17 @@ export async function notifyPayment(
             value: !INDEX_TESTNET ? 'Ethereum' : 'Sepolia',
             inline: true
           },
-          {
-            name: 'Expiration',
-            value: `<t:${space.turbo_expiration}:R>`,
-            inline: true
-          }
+          payment.type === 'credits'
+            ? {
+                name: 'Credits',
+                value: `${formatUnits(BigInt(space.credits), 9)} ETH`,
+                inline: true
+              }
+            : {
+                name: 'Expiration',
+                value: `<t:${space.turbo_expiration}:R>`,
+                inline: true
+              }
         ],
         timestamp: new Date(blockTimestamp * 1000).toISOString()
       }
