@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import './instrument';
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import Checkpoint, { evm, LogLevel } from '@snapshot-labs/checkpoint';
@@ -28,6 +29,26 @@ const dir = __dirname.endsWith('dist/src') ? '../' : '';
 const schemaFile = path.join(__dirname, `${dir}../src/schema.gql`);
 const schema = fs.readFileSync(schemaFile, 'utf8');
 
+// The database is rebuilt from chain only when what gets indexed changes:
+// the schema, the writers or their config. Other restarts resume.
+const INDEXING_FILES = [
+  'writers.ts',
+  'config.ts',
+  'payment_tokens.json',
+  'overrides.json',
+  'stripe/writers.ts',
+  'stripe/indexer.ts',
+  'stripe/config.ts'
+];
+const indexingHash = createHash('sha256')
+  .update(schema)
+  .update(
+    INDEXING_FILES.map(file =>
+      fs.readFileSync(path.join(__dirname, `${dir}../src`, file), 'utf8')
+    ).join('\n')
+  )
+  .digest('hex');
+
 if (process.env.CA_CERT) {
   process.env.CA_CERT = process.env.CA_CERT.replace(/\\n/g, '\n');
 }
@@ -40,7 +61,11 @@ const checkpoint = new Checkpoint(schema, {
   overridesConfig: overrides
 });
 
-const indexer = new evm.EvmIndexer(createEvmWriters(NETWORK));
+const indexer = process.env.HYPERSYNC_API_TOKEN
+  ? new evm.HyperSyncEvmIndexer(createEvmWriters(NETWORK), {
+      apiToken: process.env.HYPERSYNC_API_TOKEN
+    })
+  : new evm.EvmIndexer(createEvmWriters(NETWORK));
 checkpoint.addIndexer(NETWORK, config, indexer);
 
 if (stripe) {
@@ -59,8 +84,9 @@ async function run() {
     await sleep(PRODUCTION_INDEXER_DELAY);
   }
 
-  await checkpoint.resetMetadata();
-  await checkpoint.reset();
+  await checkpoint.syncVersion(
+    `${NETWORK}:${stripe ? 'stripe' : 'no-stripe'}:${indexingHash}`
+  );
   checkpoint.start();
   startExpirationMonitor(checkpoint, config);
 }

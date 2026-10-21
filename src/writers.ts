@@ -1,5 +1,7 @@
 import { evm } from '@snapshot-labs/checkpoint';
 import { capture } from '@snapshot-labs/snapshot-sentry';
+import { formatUnits } from 'viem';
+import { normalize } from 'viem/ens';
 import SchnapsAbi from './abis/Schnaps';
 import { TURBO_PRICE_USD } from './config';
 import { notifyPayment } from './discord';
@@ -8,7 +10,8 @@ import { getJSON } from './utils';
 import { Payment, Space } from '../.checkpoint/models';
 
 const MILLISECONDS = 1000;
-const DECIMALS = 1e6; // USDC and USDT both have 6 decimals
+const DECIMALS_COUNT = 6; // USDC and USDT both have 6 decimals
+const DECIMALS = 10 ** DECIMALS_COUNT;
 
 const TURBO_MONTHLY_PRICE = TURBO_PRICE_USD.monthly * DECIMALS;
 const TURBO_YEARLY_PRICE = TURBO_PRICE_USD.yearly * DECIMALS;
@@ -25,6 +28,14 @@ const ADMIN_ADDRESS = (
   process.env.ADMIN_ADDRESS || '0x8C28Cf33d9Fd3D0293f963b1cd27e3FF422B425c'
 ).toLowerCase();
 
+const NATIVE_TOKEN = '0x0000000000000000000000000000000000000000';
+const MIN_CREDITS_WEI = 8_000_000_000_000_000n; // 0.008 ETH, one proposal
+const MAX_TEXT_LENGTH = 256;
+const MAX_INT32 = 2 ** 31 - 1;
+const MAX_INT64 = 2n ** 63n - 1n;
+const SPACE_PREFIXES: Record<string, string> = { eth: 's', sep: 's-tn' };
+const CID_REGEX = /^(ipfs:\/\/)?(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{58})$/;
+
 const MIGRATED_TURBO_SPACES = {
   's:mimo.eth': 's:parallel-protocol.eth',
   's:aventus.eth': 's:aventus-gov.eth',
@@ -33,6 +44,33 @@ const MIGRATED_TURBO_SPACES = {
 
 function getTokenSymbol(tokenAddress: string, chain: string) {
   return tokens[chain][tokenAddress];
+}
+
+function isText(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= MAX_TEXT_LENGTH &&
+    !value.includes('\0')
+  );
+}
+
+// Returns the space key of a `credits:<prefix>:<space id>` barcode, or null.
+// Space ids follow the sequencer's rule: an already normalized ENS name.
+export function parseCreditsBarcode(
+  barcode: string,
+  prefix: string
+): string | null {
+  const match = barcode.match(/^credits:([^:]+):(.+)$/);
+  if (!match || match[1] !== prefix) return null;
+
+  const id = match[2];
+  try {
+    return [...id].length <= 64 && normalize(id) === id
+      ? `${prefix}:${id}`
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 // Computes the new expiration date from a payment amount.
@@ -100,6 +138,12 @@ function computeExpiration(
 }
 
 export function createEvmWriters(indexerName: string) {
+  const spacePrefix = SPACE_PREFIXES[indexerName];
+
+  function skip(txId: string, reason: string) {
+    console.log(`[evm] skipped payment ${txId}: ${reason}`);
+  }
+
   const handlePaymentReceived: evm.Writer<
     typeof SchnapsAbi,
     'PaymentReceived'
@@ -112,63 +156,88 @@ export function createEvmWriters(indexerName: string) {
     const { sender, token, amount, barcode } = event.args;
     const tokenAddress = token.toLowerCase();
     const amountRaw = BigInt(amount);
-    const amountDecimal = Number(amountRaw) / DECIMALS;
 
-    const tokenSymbol = getTokenSymbol(tokenAddress, indexerName) || '';
+    // Entities are written to the database after this writer returns, and a
+    // value the database rejects would stall the indexer on this block forever,
+    // so every field is checked before any is set.
+    if (amountRaw > MAX_INT64 || !isText(barcode)) {
+      return skip(txId, 'out of range');
+    }
 
-    const payment = new Payment(txId, indexerName);
-    payment.sender = sender;
-    payment.token_address = tokenAddress;
-    payment.token_symbol = tokenSymbol;
-    payment.amount_raw = amountRaw;
-    payment.amount_decimal = amountDecimal.toString();
-
-    payment.barcode = barcode;
-    let metadata;
     try {
-      metadata = await getJSON(barcode);
+      const creditsSpace = parseCreditsBarcode(barcode, spacePrefix);
+      let spaceId: string, tokenSymbol: string, decimals: number;
+      let metadata: any = null;
+
+      if (creditsSpace) {
+        if (tokenAddress !== NATIVE_TOKEN || amountRaw < MIN_CREDITS_WEI) {
+          return skip(txId, 'invalid credits payment');
+        }
+        [spaceId, tokenSymbol, decimals] = [creditsSpace, 'ETH', 18];
+      } else {
+        // Pro only accepts allowlisted stablecoins and content-addressed
+        // barcodes, both checked before the metadata fetch
+        tokenSymbol = getTokenSymbol(tokenAddress, indexerName);
+        if (!tokenSymbol || !CID_REGEX.test(barcode)) {
+          return skip(txId, 'not a Pro payment');
+        }
+        metadata = await getJSON(barcode).catch(err => {
+          capture(err);
+          return null;
+        });
+        if (metadata?.type !== 'turbo' || !isText(metadata.params?.space)) {
+          return skip(txId, 'invalid metadata');
+        }
+        spaceId =
+          MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
+        decimals = DECIMALS_COUNT;
+      }
+      console.log('Payment received for space', spaceId);
+
+      const payment = new Payment(txId, indexerName);
+      payment.sender = sender;
+      payment.token_address = tokenAddress;
+      payment.token_symbol = tokenSymbol;
+      payment.amount_raw = amountRaw;
+      payment.amount_decimal = formatUnits(amountRaw, decimals);
+      payment.barcode = barcode;
+      payment.block = Number(block.number);
+      payment.timestamp = Number(block.timestamp);
+      payment.type = metadata ? 'turbo' : 'credits';
+      payment.space = spaceId;
+      if (isText(metadata?.ref)) payment.ref = metadata.ref;
+
+      const space =
+        (await Space.loadEntity(spaceId, indexerName)) ??
+        new Space(spaceId, indexerName);
+
+      if (metadata) {
+        const seconds =
+          computeExpiration(
+            space,
+            payment,
+            metadata,
+            Number(block.timestamp)
+          ).getTime() / MILLISECONDS;
+        // Clamped to the 32-bit column instead of failing the write
+        space.turbo_expiration = Number.isFinite(seconds)
+          ? Math.min(seconds, MAX_INT32)
+          : MAX_INT32;
+        space.turbo_expiration_date = new Date(
+          space.turbo_expiration * MILLISECONDS
+        ).toDateString();
+      } else {
+        // Loaded int8 values come back as strings, new entities start at 0
+        space.credits = BigInt(space.credits) + amountRaw / 1_000_000_000n; // gwei
+      }
+
+      await payment.save();
+      await space.save();
+      notifyPayment(payment, space, block, txId).catch(capture);
     } catch (err) {
       capture(err);
-      console.error('Failed to fetch metadata for barcode:', err);
-      return;
+      skip(txId, 'failed to process');
     }
-    if (!metadata?.params?.space) return;
-
-    metadata.params.space =
-      MIGRATED_TURBO_SPACES[metadata.params.space] ?? metadata.params.space;
-    console.log('Payment received for space', metadata.params.space);
-
-    payment.block = Number(block.number);
-    payment.timestamp = Number(block.timestamp);
-    payment.type = metadata.type;
-
-    if (metadata.ref && typeof metadata.ref === 'string')
-      payment.ref = metadata.ref;
-
-    if (payment.type === 'turbo') payment.space = metadata.params.space;
-
-    await payment.save();
-
-    // Try to get the space entity
-    let space = await Space.loadEntity(metadata.params.space, indexerName);
-    // If it doesn't exist, create it
-    if (!space) {
-      space = new Space(metadata.params.space, indexerName);
-    }
-
-    const expirationDate = computeExpiration(
-      space,
-      payment,
-      metadata,
-      Number(block.timestamp)
-    );
-
-    space.turbo_expiration = expirationDate.getTime() / MILLISECONDS; // Divide by 1000 to convert to seconds
-    space.turbo_expiration_date = expirationDate.toDateString();
-
-    await space.save();
-
-    notifyPayment(payment, space, block, txId);
   };
 
   return {

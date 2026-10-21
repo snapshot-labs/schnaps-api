@@ -20,4 +20,5 @@ type Space {
   id: String!
   turbo_expiration: Int!
   turbo_expiration_date: String!
+  credits: BigInt!
 }

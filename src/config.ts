@@ -5,12 +5,14 @@ const CONFIG = {
   sep: {
     networkNodeUrl: 'https://rpc.brovider.xyz/11155111',
     contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
-    start: 7802789
+    start: 7802789,
+    maxBlocksPerRequest: 10000
   },
   eth: {
     networkNodeUrl: 'https://rpc.brovider.xyz/1',
     contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
-    start: 21966192
+    start: 21966192,
+    maxBlocksPerRequest: 1000
   }
 };
 
@@ -32,12 +34,14 @@ export const TURBO_PRICE_CENTS: Record<Plan, number> = {
 export function createConfig(
   indexerName: keyof typeof CONFIG
 ): CheckpointConfig {
-  const { networkNodeUrl, contract, start } = CONFIG[indexerName];
+  const { networkNodeUrl, contract, start, maxBlocksPerRequest } =
+    CONFIG[indexerName];
 
   return {
     network_node_url: networkNodeUrl,
     optimistic_indexing: false,
     fetch_interval: 15000,
+    max_blocks_per_request: maxBlocksPerRequest, // what the RPC serves in one getLogs call
     sources: [
       {
         contract,
