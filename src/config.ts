@@ -38,6 +38,7 @@ export function createConfig(
     network_node_url: networkNodeUrl,
     optimistic_indexing: false,
     fetch_interval: 15000,
+    max_blocks_per_request: 1000, // what the RPC serves in one getLogs call
     sources: [
       {
         contract,

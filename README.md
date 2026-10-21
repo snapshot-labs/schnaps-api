@@ -58,5 +58,6 @@ Copy `.env.example` to `.env`:
 - `DISCORD_WEBHOOK_URL` — payment notifications.
 - `DISCORD_EXPIRATION_WEBHOOK_URL` — expiration monitor notifications.
 - `ADMIN_ADDRESS` — address whose zero-amount payments set expiration directly.
+- `HYPERSYNC_API_TOKEN` — index through Envio HyperSync instead of the RPC; replays get much faster.
 - `INDEX_TESTNET` — index Sepolia instead of Ethereum.
 - `SENTRY_DSN`: error reporting; omit to disable.
