@@ -1,7 +1,7 @@
 import { CheckpointConfig } from '@snapshot-labs/checkpoint';
 
-// Stripe rows live under their own indexer, so an EVM reorg can never delete
-// them. Each source keeps its own expiration, consumers take the latest
+// Stripe rows live under their own indexer, so the EVM indexer's block
+// rollbacks and reorgs can never discard them
 export const STRIPE_INDEXER = 'stripe';
 export const WINDOW = 60; // a "block" is a 1-minute time window
 const STRIPE_START_TS = 1767225600; // 2026-01-01, before the first payment

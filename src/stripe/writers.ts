@@ -1,4 +1,5 @@
 import { Payment, Space } from '../../.checkpoint/models';
+import { NETWORK } from '../config';
 import {
   notifyStripeCancellation,
   notifyStripePayment,
@@ -100,10 +101,11 @@ async function handleCharge(item: StripeItem): Promise<void> {
   const isRenewal =
     invoice.billing_reason === 'subscription_cycle' && existingSpace !== null;
   const spaceEntity = existingSpace ?? new Space(space, STRIPE_INDEXER);
+  const onchainSpace = await Space.loadEntity(space, NETWORK);
 
   const expirationDate = computeExpirationFromAmount(
     amountRaw,
-    spaceEntity.turbo_expiration,
+    Math.max(spaceEntity.turbo_expiration, onchainSpace?.turbo_expiration ?? 0),
     timestamp
   );
   spaceEntity.turbo_expiration = expirationDate.getTime() / 1000;
