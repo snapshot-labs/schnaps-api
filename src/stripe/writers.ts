@@ -7,6 +7,7 @@ import {
 } from '../discord';
 import { computeExpirationFromAmount } from '../writers';
 import { stripe } from './client';
+import { STRIPE_INDEXER } from './config';
 
 const CENTS_TO_RAW = 10000n; // USD cents → 6-decimal token raw (10^6 / 10^2)
 
@@ -75,14 +76,14 @@ async function handleCharge(item: StripeItem): Promise<void> {
   }
 
   const paymentId = `stripe:${invoice.id}`;
-  if (await Payment.loadEntity(paymentId, NETWORK)) return;
+  if (await Payment.loadEntity(paymentId, STRIPE_INDEXER)) return;
 
   console.log('[stripe] payment received for space', space);
 
   const amountRaw = BigInt(amountCents) * CENTS_TO_RAW;
   const timestamp = charge.created;
 
-  const payment = new Payment(paymentId, NETWORK);
+  const payment = new Payment(paymentId, STRIPE_INDEXER);
   payment.sender = 'stripe';
   payment.token_address = 'stripe';
   payment.token_symbol = 'USD';
@@ -96,14 +97,15 @@ async function handleCharge(item: StripeItem): Promise<void> {
   if (typeof ref === 'string' && ref) payment.ref = ref;
   await payment.save();
 
-  const existingSpace = await Space.loadEntity(space, NETWORK);
+  const existingSpace = await Space.loadEntity(space, STRIPE_INDEXER);
   const isRenewal =
     invoice.billing_reason === 'subscription_cycle' && existingSpace !== null;
-  const spaceEntity = existingSpace ?? new Space(space, NETWORK);
+  const spaceEntity = existingSpace ?? new Space(space, STRIPE_INDEXER);
+  const onchainSpace = await Space.loadEntity(space, NETWORK);
 
   const expirationDate = computeExpirationFromAmount(
     amountRaw,
-    spaceEntity.turbo_expiration,
+    Math.max(spaceEntity.turbo_expiration, onchainSpace?.turbo_expiration ?? 0),
     timestamp
   );
   spaceEntity.turbo_expiration = expirationDate.getTime() / 1000;
@@ -133,7 +135,10 @@ async function handleRefund(item: StripeItem): Promise<void> {
   const invoiceId = typeof invoice === 'string' ? invoice : invoice?.id;
   if (!invoiceId) return;
 
-  const payment = await Payment.loadEntity(`stripe:${invoiceId}`, NETWORK);
+  const payment = await Payment.loadEntity(
+    `stripe:${invoiceId}`,
+    STRIPE_INDEXER
+  );
   if (!payment) return;
 
   const space = payment.space;
@@ -144,7 +149,7 @@ async function handleRefund(item: StripeItem): Promise<void> {
     await payment.delete();
   }
 
-  const spaceEntity = await Space.loadEntity(space, NETWORK);
+  const spaceEntity = await Space.loadEntity(space, STRIPE_INDEXER);
   if (spaceEntity) {
     const reductionSeconds =
       computeExpirationFromAmount(refundAmountRaw, 0, 0).getTime() / 1000;

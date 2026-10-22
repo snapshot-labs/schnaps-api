@@ -1,5 +1,8 @@
 import { CheckpointConfig } from '@snapshot-labs/checkpoint';
 
+// Stripe rows live under their own indexer, so the EVM indexer's block
+// rollbacks and reorgs can never discard them
+export const STRIPE_INDEXER = 'stripe';
 export const WINDOW = 60; // a "block" is a 1-minute time window
 const STRIPE_START_TS = 1767225600; // 2026-01-01, before the first payment
 
