@@ -15,14 +15,19 @@ type DiscordMessage = {
   embeds?: Record<string, unknown>[];
 };
 
+// Never rejects: callers don't await it, and an unhandled rejection exits the process
 async function postToDiscord(body: DiscordMessage): Promise<void> {
   if (!DISCORD_WEBHOOK_URL) return;
 
-  await fetch(DISCORD_WEBHOOK_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  try {
+    await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch (err) {
+    capture(err);
+  }
 }
 
 const isRecent = (timestamp: number) =>
