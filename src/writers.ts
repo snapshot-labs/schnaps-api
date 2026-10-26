@@ -30,7 +30,7 @@ const ADMIN_ADDRESS = (
 ).toLowerCase();
 
 const NATIVE_TOKEN = '0x0000000000000000000000000000000000000000';
-const MIN_CREDITS_WEI = 8_000_000_000_000_000n; // 0.008 ETH, one proposal
+const MIN_CREDITS_WEI = 10_000_000_000_000_000n; // 0.01 ETH, one proposal
 const MAX_TEXT_LENGTH = 256;
 const MAX_INT32 = 2 ** 31 - 1;
 const MAX_INT64 = 2n ** 63n - 1n;
