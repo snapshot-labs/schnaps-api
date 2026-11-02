@@ -34,7 +34,11 @@ const MIN_CREDITS_WEI = 10_000_000_000_000_000n; // 0.01 ETH, one proposal
 const MAX_TEXT_LENGTH = 256;
 const MAX_INT32 = 2 ** 31 - 1;
 const MAX_INT64 = 2n ** 63n - 1n;
-const SPACE_PREFIXES: Record<string, string> = { eth: 's', sep: 's-tn' };
+const SPACE_PREFIXES: Record<string, string> = {
+  eth: 's',
+  base: 's',
+  sep: 's-tn'
+};
 const CID_REGEX = /^(ipfs:\/\/)?(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{58})$/;
 
 const MIGRATED_TURBO_SPACES = {
@@ -44,7 +48,7 @@ const MIGRATED_TURBO_SPACES = {
 };
 
 function getTokenSymbol(tokenAddress: string, chain: string) {
-  return tokens[chain][tokenAddress];
+  return tokens[chain]?.[tokenAddress];
 }
 
 function isText(value: unknown): value is string {
@@ -239,7 +243,7 @@ export function createEvmWriters(indexerName: string) {
 
       await payment.save();
       await space.save();
-      notifyPayment(payment, space, block, txId).catch(capture);
+      notifyPayment(payment, space, block, txId, indexerName).catch(capture);
     } catch (err) {
       capture(err);
       skip(txId, 'failed to process');

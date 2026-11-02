@@ -9,6 +9,11 @@ const DISCORD_EXPIRATION_WEBHOOK_URL =
 const INDEX_TESTNET = process.env.INDEX_TESTNET;
 
 const SNAPSHOT_BASE_URL = `https://${INDEX_TESTNET ? 'testnet.' : ''}snapshot.box`;
+const CHAINS: Record<string, { name: string; explorer: string }> = {
+  eth: { name: 'Ethereum', explorer: 'https://etherscan.io' },
+  base: { name: 'Base', explorer: 'https://basescan.org' },
+  sep: { name: 'Sepolia', explorer: 'https://sepolia.etherscan.io' }
+};
 
 type DiscordMessage = {
   content?: string;
@@ -62,12 +67,13 @@ export async function notifyPayment(
   payment: Payment,
   space: Space,
   block: GetBlockReturnType,
-  txHash: string
+  txHash: string,
+  indexerName: string
 ): Promise<void> {
   const blockTimestamp = Number(block.timestamp);
   if (!isRecent(blockTimestamp)) return;
 
-  const explorerBaseUrl = `https://${INDEX_TESTNET ? 'sepolia.' : ''}etherscan.io`;
+  const { name, explorer: explorerBaseUrl } = CHAINS[indexerName];
 
   await postToDiscord({
     embeds: [
@@ -87,7 +93,7 @@ export async function notifyPayment(
           },
           {
             name: 'Network',
-            value: !INDEX_TESTNET ? 'Ethereum' : 'Sepolia',
+            value: name,
             inline: true
           },
           payment.type === 'credits'
