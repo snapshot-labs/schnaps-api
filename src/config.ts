@@ -13,10 +13,21 @@ const CONFIG = {
     contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
     start: 21966192,
     maxBlocksPerRequest: 1000
+  },
+  // Only Snapshot Plus credits are paid on Base, from when the UI offers it
+  base: {
+    networkNodeUrl: 'https://rpc.brovider.xyz/8453',
+    contract: '0xe40bfeb5a3014c9b98597088ca71eccdc27ca410',
+    start: 53424000,
+    maxBlocksPerRequest: 1000
   }
 };
 
+// Pro is paid on NETWORK only, Snapshot Plus credits on every network
 export const NETWORK = process.env.INDEX_TESTNET ? 'sep' : 'eth';
+export const NETWORKS: (keyof typeof CONFIG)[] = process.env.INDEX_TESTNET
+  ? [NETWORK]
+  : [NETWORK, 'base'];
 
 export const PLANS = ['monthly', 'yearly'] as const;
 export type Plan = (typeof PLANS)[number];

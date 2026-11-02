@@ -7,7 +7,7 @@ import Checkpoint, { evm, LogLevel } from '@snapshot-labs/checkpoint';
 import { Sentry } from '@snapshot-labs/snapshot-sentry';
 import cors from 'cors';
 import express from 'express';
-import { createConfig, NETWORK } from './config';
+import { createConfig, NETWORK, NETWORKS } from './config';
 import { startExpirationMonitor } from './expirationMonitor';
 import overrides from './overrides.json';
 import { stripe } from './stripe/client';
@@ -61,12 +61,14 @@ const checkpoint = new Checkpoint(schema, {
   overridesConfig: overrides
 });
 
-const indexer = process.env.HYPERSYNC_API_TOKEN
-  ? new evm.HyperSyncEvmIndexer(createEvmWriters(NETWORK), {
-      apiToken: process.env.HYPERSYNC_API_TOKEN
-    })
-  : new evm.EvmIndexer(createEvmWriters(NETWORK));
-checkpoint.addIndexer(NETWORK, config, indexer);
+for (const network of NETWORKS) {
+  const indexer = process.env.HYPERSYNC_API_TOKEN
+    ? new evm.HyperSyncEvmIndexer(createEvmWriters(network), {
+        apiToken: process.env.HYPERSYNC_API_TOKEN
+      })
+    : new evm.EvmIndexer(createEvmWriters(network));
+  checkpoint.addIndexer(network, createConfig(network), indexer);
+}
 
 if (stripe) {
   checkpoint.addIndexer(
@@ -85,7 +87,7 @@ async function run() {
   }
 
   await checkpoint.syncVersion(
-    `${NETWORK}:${stripe ? 'stripe' : 'no-stripe'}:${indexingHash}`
+    `${NETWORKS.join(':')}:${stripe ? 'stripe' : 'no-stripe'}:${indexingHash}`
   );
   checkpoint.start();
   startExpirationMonitor(checkpoint, config);
